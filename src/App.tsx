@@ -1,35 +1,57 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'sonner';
 
-function App() {
-  const [count, setCount] = useState(0)
+// Pages
+import Login from "./pages/login"
+import Register from "./pages/Signup" // Check filename casing
+import FitnessDashboard from "./pages/FitnessDashboard" // Assuming this is your layout
+import ProtectedRoute from "./components/ProtectedRoute"
+import UserInfoForm from "./pages/UserInfoForm"
 
+// Sub-pages (Views)
+import HomeView from "./pages/Home"
+import WorkoutView from "./pages/Workout"
+import NutritionView from "./pages/Nutrition"
+import GoalsView from './pages/Goals'
+import SettingsView from './pages/Settings'
+import CameraCapture from './pages/CameraCapture'
+// ... import other pages
+
+export default function App() {
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <Toaster richColors position="top-center" theme="dark" />
+      <Routes>
+        {/* --- PUBLIC ROUTES --- */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* --- PROTECTED ROUTES --- */}
+        {/* 1. Check if user is logged in (ProtectedRoute)
+          2. If yes, render FitnessDashboard (Layout)
+          3. Render specific sub-page inside Dashboard 
+      */}
+        <Route element={<ProtectedRoute />}>
+
+          {/* This assumes FitnessDashboard contains an <Outlet /> where content goes */}
+          <Route path="/" element={<FitnessDashboard />}>
+            {/* Default path redirects to home or renders home */}
+            <Route index element={<HomeView />} />
+            <Route path="/user-info" element={<UserInfoForm />} />
+            <Route path="home" element={<HomeView />} />
+            <Route path="workout" element={<WorkoutView />} />
+            <Route path="nutrition" element={<NutritionView />} />
+            <Route path="goals" element={<GoalsView />} />
+            <Route path="settings" element={<SettingsView />} />
+            <Route path="camera" element={<CameraCapture />} />
+            {/* Add other protected routes here */}
+          </Route>
+
+        </Route>
+
+        {/* Catch all - Redirect to login */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
     </>
   )
 }
-
-export default App
