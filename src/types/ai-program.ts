@@ -15,6 +15,9 @@ export interface IExercisesItem {
     name: string;
     sets: string;
     reps: string;
+    weight?: string;
+    target_sets?: string;
+    target_reps?: string;
 }
 
 export interface INutritionTargets {

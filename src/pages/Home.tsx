@@ -1,4 +1,4 @@
-import { Play, Footprints, Flame, Moon, Heart, Camera, Droplets, Plus, TrendingUp, Wheat, Candy, Beef, Info, Scale, Activity } from 'lucide-react';
+import { Play, Footprints, Flame, Moon, Heart, Camera, Droplets, Plus, TrendingUp, Wheat, Candy, Beef, Info, Scale, Activity, Users } from 'lucide-react';
 import { Header, StatCard, MacroBar } from '../components/shared';
 import { useUserStore } from '../store/useUserStore';
 import { useState, useEffect, useRef } from 'react';
@@ -7,13 +7,16 @@ import { type IAiNutrition } from '../types/ai-program';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { min } from 'date-fns';
 import { Upload } from 'lucide-react';
+import { useNutritionStore } from '../store/useNutritionStore';
+import { isSameDay } from 'date-fns';
 
 // removed unused import
 
 
 
 export default function HomeView() {
-  const { user, syncFitnessData } = useUserStore();
+  const { user: currentUser, syncFitnessData } = useUserStore();
+  const { meals, aiProgram, fetchMeals, fetchProgram } = useNutritionStore();
   const [water, setWater] = useState(0);
   const [showCamera, setShowCamera] = useState(false);
   const [nutritionData, setNutritionData] = useState<any>(null);
@@ -85,14 +88,14 @@ export default function HomeView() {
 
 
   const saveMealToLog = async () => {
-    if (!user?.email || !nutritionData) return;
+    if (!currentUser?.email || !nutritionData) return;
 
     try {
       const response = await fetch('http://localhost:5001/save-meal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: user.email,
+          email: currentUser.email,
           mealData: nutritionData
         }),
       });
@@ -188,14 +191,14 @@ export default function HomeView() {
   };
 
   const saveWaterToDB = async (newAmount: number) => {
-    if (!user?.email) return;
+    if (!currentUser?.email) return;
 
     try {
       await fetch('http://localhost:5001/update-water', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: user.email,
+          email: currentUser.email,
           waterAmount: newAmount
         }),
       });
@@ -210,10 +213,10 @@ export default function HomeView() {
     syncFitnessData();
 
     const fetchWaterFromDB = async () => {
-      if (!user?.email) return;
+      if (!currentUser?.email) return;
 
       try {
-        const response = await fetch(`http://localhost:5001/get-water/${user.email}`);
+        const response = await fetch(`http://localhost:5001/get-water/${currentUser.email}`);
         const data = await response.json();
 
         // Veritabanından gelen değeri state'e işle
@@ -225,7 +228,25 @@ export default function HomeView() {
     fetchWaterFromDB();
 
 
-  }, [user?.email]);
+  }, [currentUser?.email]);
+
+  // Yeni günlük makro hesaplaması
+  const today = new Date();
+  const todaysMeals = meals.filter(meal => isSameDay(new Date(meal.date), today));
+
+  const dailyMacros = todaysMeals.reduce((acc, meal) => ({
+    protein: acc.protein + (meal.protein || 0),
+    carbs: acc.carbs + (meal.carbs || 0),
+    fat: acc.fat + (meal.fat || 0),
+    calories: acc.calories + (meal.calories || 0)
+  }), { protein: 0, carbs: 0, fat: 0, calories: 0 });
+
+  useEffect(() => {
+    if (currentUser?.email) {
+      fetchMeals(currentUser.email, false);
+      fetchProgram(currentUser.email);
+    }
+  }, [currentUser?.email]);
 
 
   const handleAddWater = () => {
@@ -237,7 +258,7 @@ export default function HomeView() {
   };
   return (
     <>
-      <Header title={`${user?.fullName}`} subtitle="Günaydın," showProfileOnMobile={true} />
+      <Header title={`${currentUser?.fullName}`} subtitle="Günaydın," showProfileOnMobile={true} />
       <div className="px-5 lg:px-8 py-6 space-y-6 max-w-6xl mx-auto">
         {/* Hero Score Card */}
         <section className="bg-zinc-900/60 border border-zinc-800/50 rounded-2xl p-6 lg:p-8">
@@ -286,7 +307,7 @@ export default function HomeView() {
             <StatCard
               icon={<Footprints size={18} />}
               label="Adım"
-              value={user?.daily_stats?.steps ? user.daily_stats.steps.toLocaleString() : "0"}
+              value={currentUser?.daily_stats?.steps ? currentUser.daily_stats.steps.toLocaleString() : "0"}
               subtitle="/ 10,000"
               colorClass="bg-emerald-500/10 text-emerald-400"
             />
@@ -294,7 +315,7 @@ export default function HomeView() {
 
               icon={<Flame size={18} />}
               label="Kalori"
-              value={user?.daily_stats?.calories ? user.daily_stats.calories.toString() : "0"}
+              value={currentUser?.daily_stats?.calories ? currentUser.daily_stats.calories.toString() : "0"}
               subtitle="kcal"
               colorClass="bg-orange-500/10 text-orange-400 "
             />
@@ -382,9 +403,9 @@ export default function HomeView() {
             </span>
           </div>
           <div className="space-y-4">
-            <MacroBar label="Protein" current={80} total={140} colorClass="bg-emerald-500" />
-            <MacroBar label="Karbonhidrat" current={120} total={200} colorClass="bg-sky-500" />
-            <MacroBar label="Yağ" current={45} total={70} colorClass="bg-amber-500" />
+            <MacroBar label="Protein" current={dailyMacros.protein} total={aiProgram?.nutrition_targets?.protein || 140} colorClass="bg-emerald-500" />
+            <MacroBar label="Karbonhidrat" current={dailyMacros.carbs} total={aiProgram?.nutrition_targets?.carbs || 200} colorClass="bg-sky-500" />
+            <MacroBar label="Yağ" current={dailyMacros.fat} total={aiProgram?.nutrition_targets?.fats || 70} colorClass="bg-amber-500" />
           </div>
         </section>
       </div>

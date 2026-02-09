@@ -25,6 +25,11 @@ export interface User {
         calories: number;
         last_sync: Date;
     };
+    program?: {
+        protein: number;
+        carbs: number;
+        fats: number;
+    }
 }
 
 interface UserState {

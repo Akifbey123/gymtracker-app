@@ -12,8 +12,11 @@ interface WorkoutState {
     setLoading: (loading: boolean) => void;
 
     fetchProgram: (email: string) => Promise<void>;
-    generateProgram: (user: any) => Promise<void>; // Using 'any' for user to avoid circular deps for now
-    saveLog: (data: { email: string, day: string, exercise: string, reps: string, sets: string }, callback?: (logs: any[]) => void) => Promise<void>;
+    setProgram: (program: IAiWorkout) => void;
+    generateProgram: (user: any) => Promise<void>;
+    saveLog: (data: { email: string, day: string, exercise: string, reps: string, sets: string, weight?: string }, callback?: (logs: any[]) => void) => Promise<void>;
+    saveProgramToBackend: (email: string, program: IAiWorkout) => Promise<void>;
+    addExerciseToProgram: (data: { email: string, day: string, exercises: any[] }) => Promise<void>;
 }
 
 export const useWorkoutStore = create<WorkoutState>((set) => ({
@@ -22,6 +25,7 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
     loading: false,
 
     setAiProgram: (program) => set({ aiProgram: program }),
+    setProgram: (program) => set({ aiProgram: program }),
     setWorkoutLogs: (logs) => set({ workoutLogs: logs }),
     setLoading: (loading) => set({ loading }),
 
@@ -65,7 +69,6 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
 
         } catch (error) {
             console.error("AI Hatası:", error);
-            console.error("AI Hatası:", error);
             toast.error("Program oluşturulurken bir hata oluştu.");
         } finally {
             set({ loading: false });
@@ -81,7 +84,10 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
                     email: logData.email,
                     day: logData.day,
                     exercise: logData.exercise,
-                    note: `${logData.sets} set, ${logData.reps} tekrar`
+                    weight: logData.weight,
+                    reps: logData.reps,
+                    sets: logData.sets,
+                    note: `${logData.sets} set, ${logData.reps} tekrar${logData.weight ? `, ${logData.weight}kg` : ''}`
                 }),
             });
 
@@ -89,12 +95,59 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
                 const data = await response.json();
                 set({ workoutLogs: data.logs });
                 if (callback) callback(data.logs);
-                set({ workoutLogs: data.logs });
-                if (callback) callback(data.logs);
                 toast.success("Kaydedildi!");
             }
         } catch (error) {
             console.error("Kayıt hatası", error);
+        }
+    },
+
+    saveProgramToBackend: async (email: string, program: IAiWorkout) => {
+        try {
+            const response = await fetch('http://localhost:5001/save-program', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email,
+                    program
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error("Program kaydedilemedi");
+            }
+
+            // Başarılı olursa store'u güncelle (zaten güncel olabilir ama emin olalım)
+            set({ aiProgram: program });
+            toast.success("Program başarıyla kaydedildi!");
+
+        } catch (error) {
+            console.error("Program kayıt hatası:", error);
+            toast.error("Program kaydedilirken bir hata oluştu.");
+        }
+    },
+
+    addExerciseToProgram: async ({ email, day, exercises }) => {
+        try {
+            const response = await fetch('http://localhost:5001/program/add-exercise', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, day, exercises })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Egzersiz eklenemedi");
+            }
+
+            const data = await response.json();
+            if (data.program) {
+                set({ aiProgram: data.program });
+                toast.success("Egzersiz başarıyla eklendi!");
+            }
+        } catch (error: any) {
+            console.error("Add exercise error:", error);
+            toast.error(error.message || "Egzersiz eklenirken bir hata oluştu.");
         }
     }
 }));

@@ -1,25 +1,36 @@
-import { Dumbbell, Clock, Flame, Zap, Activity, Trophy } from 'lucide-react';
+import { Dumbbell, Clock, Flame, Zap, Activity, Trophy, Plus, Trash2, Save, ChevronDown, ChevronUp, ArrowRight, History, X, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { Header } from '../components/shared';
 import { useAuth } from '../context/UserContext';
 import { useWorkoutStore } from '../store/useWorkoutStore';
 import { useEffect, useMemo, useState } from 'react';
-import { Check, X, NotebookPen } from "lucide-react";
+import { type IAiWorkout, type IScheduleItem, type IExercisesItem } from '../types/ai-program';
+
 export default function WorkoutView() {
   const { user, login } = useAuth();
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+
+  const initialExercises = [
+    "Squat", "Deadlift", "Bench Press", "Overhead Press",
+    "Pull Up", "Dumbbell Row", "Lat Pulldown", "Push Up",
+    "Lunges", "Leg Press", "Leg Extension", "Leg Curl",
+    "Face Pull", "Lateral Raise", "Bicep Curl", "Tricep Extension",
+    "Plank", "Crunch", "Russian Twist"
+  ];
   const {
     aiProgram,
     workoutLogs,
     loading,
     fetchProgram,
     generateProgram,
+    setProgram,
     saveLog,
-    setWorkoutLogs
+    setWorkoutLogs,
+    saveProgramToBackend,
+    addExerciseToProgram
   } = useWorkoutStore();
 
-  // Logları tutan state - store'da workoutLogs var, onu kullanacağız.
-  // Ancak UserContext'ten gelen loglar da olabilir. 
-  // Store'u initialize etmek gerekebilir.
+  const [isCreatingProgram, setIsCreatingProgram] = useState(false);
 
   // Kullanıcı değişirse logları güncelle
   useEffect(() => {
@@ -44,8 +55,22 @@ export default function WorkoutView() {
       email: user.email
     })
   }
+  const addExercise = async (exerciseName: string) => {
+    if (!aiProgram || !selectedDay || !user?.email) return;
 
+    await addExerciseToProgram({
+      email: user.email,
+      day: selectedDay,
+      exercises: [{
+        name: exerciseName,
+        sets: "3",
+        reps: "12",
+        weight: "0"
+      }]
+    });
 
+    setSelectedDay(null);
+  }
 
   const recommendedWorkout = useMemo(() => {
     // Varsayılan antrenman
@@ -92,11 +117,10 @@ export default function WorkoutView() {
     }
 
     return workout;
-  }, [user]);
+  }, [user, aiProgram]);
 
 
-
-  const handleSaveLog = async (day: string, exercise: string, reps: string, sets: string) => {
+  const handleSaveLog = async (day: string, exercise: string, reps: string, sets: string, weight?: string) => {
     if (!user?.email) return;
 
     await saveLog({
@@ -104,7 +128,8 @@ export default function WorkoutView() {
       day,
       exercise,
       reps,
-      sets
+      sets,
+      weight
     }, (newLogs) => {
       // Global context güncelle
       if (user) {
@@ -113,37 +138,74 @@ export default function WorkoutView() {
     });
   };
 
+  const getLastLog = (exerciseName: string) => {
+    if (!workoutLogs || workoutLogs.length === 0) return null;
+    const logs = workoutLogs.filter(log => log.exercise.toLowerCase() === exerciseName.toLowerCase());
+    if (logs.length === 0) return null;
+
+    return logs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+  }
+
 
   return (
     <>
       <Header title="Antrenman Programı" subtitle="Sana Özel" />
       <div className="px-5 lg:px-8 py-6 space-y-6 max-w-6xl mx-auto">
-        {/* Today's Focus */}
-        <section className={`bg-zinc-900/60 border border-zinc-800/50 rounded-2xl p-6 relative overflow-hidden group ${aiProgram ? 'hidden' : ''}`}>
-          <div className="absolute right-0 top-0 opacity-5 pointer-events-none">
-            <Dumbbell size={150} />
-          </div>
-          <div className={`relative z-10 `}>
-            <span className="inline-block px-2.5 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-full mb-3 ">
-              Bugün: {recommendedWorkout.type}
-            </span>
-            <h2 className="text-2xl font-semibold text-zinc-100 mb-2">{recommendedWorkout.title}</h2>
-            <div className="flex gap-4 text-sm text-zinc-400 mb-6">
-              <span className="flex items-center gap-1"><Clock size={14} /> {recommendedWorkout.duration}</span>
-              <span className="flex items-center gap-1"><Flame size={14} /> {recommendedWorkout.calories}</span>
-              <span className="flex items-center gap-1"><Zap size={14} /> {recommendedWorkout.level}</span>
-            </div>
+
+        {/* CREATE PROGRAM SECTION toggler */}
+        {!aiProgram && !isCreatingProgram && (
+          <div className="flex gap-4">
             <button
-              onClick={handleGenerateProgram}
-              disabled={loading}
-              className="w-full lg:w-auto bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-medium px-6 py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {loading ? "Program Hazırlanıyor..." : "Yapay Zeka ile Program Oluştur"}
+              onClick={() => setIsCreatingProgram(true)}
+              className="flex-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 py-4 rounded-xl flex items-center justify-center gap-2 font-medium transition-colors"
+            >
+              <Plus size={20} /> Kendi Programını Oluştur
             </button>
           </div>
-        </section>
+        )}
 
-        {/* AI Program Response Section */}
-        {aiProgram && (
+        {/* CUSTOM PROGRAM BUILDER */}
+        {isCreatingProgram && (
+          <CustomProgramBuilder
+            onCancel={() => setIsCreatingProgram(false)}
+            onSave={(newProgram) => {
+              setProgram(newProgram);
+              setIsCreatingProgram(false);
+
+            }}
+          />
+        )}
+
+
+
+        {/* NO PROGRAM DEFAULT VIEW (Hero Score Card) */}
+        {!aiProgram && !isCreatingProgram && (
+          <section className={`bg-zinc-900/60 border border-zinc-800/50 rounded-2xl p-6 relative overflow-hidden group`}>
+            <div className="absolute right-0 top-0 opacity-5 pointer-events-none">
+              <Dumbbell size={150} />
+            </div>
+            <div className={`relative z-10 `}>
+              <span className="inline-block px-2.5 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-full mb-3 ">
+                Bugün: {recommendedWorkout.type}
+              </span>
+              <h2 className="text-2xl font-semibold text-zinc-100 mb-2">{recommendedWorkout.title}</h2>
+              <div className="flex gap-4 text-sm text-zinc-400 mb-6">
+                <span className="flex items-center gap-1"><Clock size={14} /> {recommendedWorkout.duration}</span>
+                <span className="flex items-center gap-1"><Flame size={14} /> {recommendedWorkout.calories}</span>
+                <span className="flex items-center gap-1"><Zap size={14} /> {recommendedWorkout.level}</span>
+              </div>
+              <button
+                onClick={handleGenerateProgram}
+                disabled={loading}
+                className="w-full lg:w-auto bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-medium px-6 py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                {loading ? "Program Hazırlanıyor..." : "Yapay Zeka ile Program Oluştur"}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* ACTIVE PROGRAM VIEW */}
+        {aiProgram && !isCreatingProgram && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
             {/* Header & Motivation */}
@@ -154,45 +216,16 @@ export default function WorkoutView() {
               <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-2 text-emerald-400">
                   <Zap size={20} />
-                  <span className="text-sm font-bold tracking-wide uppercase">Yapay Zeka Destekli Program</span>
+                  <span className="text-sm font-bold tracking-wide uppercase">Aktif Program</span>
                 </div>
                 <h2 className="text-3xl font-bold text-white mb-4">{aiProgram.program_name}</h2>
                 <blockquote className="border-l-4 border-emerald-500 pl-4 py-1 text-zinc-400 italic text-lg">
-                  "{aiProgram.motivation}"
+                  "{aiProgram.motivation || 'Gücünü keşfet.'}"
                 </blockquote>
               </div>
             </section>
 
-            {/* Nutrition Targets */}
-
-            <section>
-              <h3 className="text-lg font-semibold text-zinc-200 mb-4 flex items-center gap-2">
-                <Flame size={20} className="text-orange-500" /> Beslenme Hedefleri
-              </h3>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <NutritionCard label="Kalori" value={aiProgram?.nutrition_targets?.calories} unit="kcal" color="bg-orange-500/10 text-orange-400" />
-                <NutritionCard label="Protein" value={aiProgram?.nutrition_targets?.protein} unit="g" color="bg-blue-500/10 text-blue-400" />
-                <NutritionCard label="Karbonhidrat" value={aiProgram?.nutrition_targets?.carbs} unit="g" color="bg-amber-500/10 text-amber-400" />
-                <NutritionCard label="Yağ" value={aiProgram?.nutrition_targets?.fats} unit="g" color="bg-rose-500/10 text-rose-400" />
-              </div>
-            </section>
-
-            {/* Daily Commands */}
-            <section className="bg-zinc-900/60 border border-zinc-800/50 rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-zinc-200 mb-4 flex items-center gap-2">
-                <Activity size={20} className="text-emerald-500" /> Günlük Görevler
-              </h3>
-              <ul className="space-y-3">
-                {aiProgram.daily_commands.map((cmd, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-zinc-300">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0" />
-                    <span>{cmd}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            {/* Weekly Schedule */}
+            {/* Weekly Schedule & PROGRESSIVE OVERLOAD TRACKER */}
             <section>
               <h3 className="text-lg font-semibold text-zinc-200 mb-4 flex items-center gap-2">
                 <Clock size={20} className="text-purple-500" /> Haftalık Antrenman Programı
@@ -200,200 +233,326 @@ export default function WorkoutView() {
               <div className="space-y-4">
                 {aiProgram.schedule.map((day, idx) => (
                   <div key={idx} className="bg-zinc-900/60 border border-zinc-800/50 rounded-xl overflow-hidden">
-                    <div className="bg-zinc-800/40 px-6 py-4 border-b border-zinc-800/50">
+                    <div className="bg-zinc-800/40 px-6 py-4 border-b border-zinc-800/50 flex justify-between items-center">
                       <h4 className="font-semibold text-white">{day.day}</h4>
+                      <button
+                        onClick={() => setSelectedDay(day.day)}
+                        className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-3 py-1.5 rounded-lg flex items-center justify-center gap-1 text-xs font-bold transition-colors">
+                        <Plus size={16} />
+                        Egzersiz Ekle
+                      </button>
+                      {selectedDay === day.day && (
+                        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+                          <div className="bg-zinc-900 border border-zinc-800 w-full max-w-lg max-h-[80vh] flex flex-col rounded-2xl p-6 relative shadow-2xl animate-in zoom-in-95 duration-200">
+                            <div className="flex justify-between items-center mb-4">
+                              <h3 className="text-lg font-bold text-zinc-100">Egzersiz Seç</h3>
+                              <button onClick={() => setSelectedDay(null)} className="text-zinc-500 hover:text-white"><X size={24} /></button>
+                            </div>
+
+                            <div className="overflow-y-auto pr-2 space-y-2 flex-1 custom-scrollbar">
+                              {initialExercises.map((ex, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => addExercise(ex)}
+                                  className="w-full text-left px-4 py-3 rounded-xl bg-zinc-950/50 hover:bg-zinc-800/80 border border-zinc-800/50 hover:border-emerald-500/50 group transition-all"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-zinc-300 group-hover:text-emerald-400 font-medium">{ex}</span>
+                                    <Plus size={16} className="text-zinc-600 group-hover:text-emerald-500" />
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+
+                            <div className="mt-4 pt-4 border-t border-zinc-800 text-center">
+                              <button onClick={() => setSelectedDay(null)} className="text-zinc-400 text-sm hover:text-white">Vazgeç</button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <span className="text-xs text-zinc-500">{day.exercises.length} Egzersiz</span>
                     </div>
-                    <div className="p-4 space-y-3">
-                      <div className="p-4 space-y-3">
-                        {day.exercises.map((ex, i) => (
-                          // BURADA YENİ BİLEŞENİ ÇAĞIRIYORUZ
+
+                    <div className="divide-y divide-zinc-800/50">
+                      {day.exercises.map((ex, i) => {
+                        const lastLog = getLastLog(ex.name);
+                        return (
                           <ExerciseItem
                             key={i}
                             exercise={ex}
                             day={day.day}
+                            lastLog={lastLog}
                             onSave={handleSaveLog}
                           />
-                        ))}
-                      </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
               </div>
             </section>
-          </div>
-        )}
+          </div >
+        )
+        }
 
-        {/* History Section */}
-        {workoutLogs.length > 0 && (
-          <section className="bg-zinc-900/60 border border-zinc-800/50 rounded-2xl p-6">
-            <h3 className="text-lg font-semibold text-zinc-200 mb-4 flex items-center gap-2">
-              <Activity size={20} className="text-emerald-500" /> Son Aktiviteler
-            </h3>
-            <div className="space-y-2">
-              {[...workoutLogs].reverse().slice(0, 5).map((log: any, i: number) => (
-                <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-zinc-950/30 border border-zinc-800/50">
-                  <div>
-                    <div className="text-sm font-medium text-white">{log.exercise}</div>
-                    <div className="text-xs text-zinc-500">{new Date(log.date).toLocaleDateString()} - {log.day}</div>
+        {/* History Section (Keeping existing but refreshing list) */}
+        {
+          workoutLogs.length > 0 && (
+            <section className="bg-zinc-900/60 border border-zinc-800/50 rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-zinc-200 mb-4 flex items-center gap-2">
+                <Activity size={20} className="text-emerald-500" /> Son Aktiviteler
+              </h3>
+              <div className="space-y-2">
+                {[...workoutLogs].reverse().slice(0, 5).map((log: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-zinc-950/30 border border-zinc-800/50">
+                    <div>
+                      <div className="text-sm font-medium text-white">{log.exercise}</div>
+                      <div className="text-xs text-zinc-500">{new Date(log.date).toLocaleDateString()} - {log.day}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-mono text-emerald-400">
+                        {log.note}
+                      </div>
+                      {log.weight && <div className="text-xs text-zinc-400 font-mono">{log.weight}kg</div>}
+                    </div>
                   </div>
-                  <div className="text-sm font-mono text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">
-                    {log.note}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+                ))}
+              </div>
+            </section>
+          )
+        }
 
-        {/* Workout Categories */}
-        <section>
-          <h3 className="text-sm font-medium text-zinc-500 mb-4">Kategoriler</h3>
-          <div className="grid grid-cols-2 gap-3 lg:gap-4">
-            <CategoryCard icon={<Zap size={20} />} title="HIIT & Kardiyo" count="12 Antrenman" color="text-amber-400" bg="bg-amber-500/10" />
-            <CategoryCard icon={<Dumbbell size={20} />} title="Güç & Hacim" count="24 Antrenman" color="text-emerald-400" bg="bg-emerald-500/10" />
-            <CategoryCard icon={<Activity size={20} />} title="Yoga & Esneklik" count="8 Antrenman" color="text-indigo-400" bg="bg-indigo-500/10" />
-            <CategoryCard icon={<Trophy size={20} />} title="Zorlu Parkur" count="5 Antrenman" color="text-rose-400" bg="bg-rose-500/10" />
-          </div>
-        </section>
-
-        {/* Schedule */}
-        <section>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-medium text-zinc-500">Haftalık Plan</h3>
-            <button className="text-xs text-emerald-400">Düzenle</button>
-          </div>
-          <div className="space-y-3">
-            <ScheduleItem day="Pazartesi" title="Göğüs & Arka Kol" status="done" />
-            <ScheduleItem day="Salı" title="HIIT Kardiyo" status="done" />
-            <ScheduleItem day="Çarşamba" title="Sırt & Ön Kol" status="missed" />
-            <ScheduleItem day="Perşembe" title="Bacak & Kalça" status="upcoming" />
-            <ScheduleItem day="Cuma" title="Omuz & Core" status="upcoming" />
-          </div>
-        </section>
       </div >
     </>
   )
 }
 
-// Local Components for Workout Page
-function CategoryCard({ icon, title, count, color, bg }: any) {
-  return (
-    <div className="bg-zinc-900/60 border border-zinc-800/50 rounded-xl p-4 flex items-center gap-3 hover:bg-zinc-800/60 transition-colors cursor-pointer">
-      <div className={`w-10 h-10 ${bg} ${color} rounded-lg flex items-center justify-center shrink-0`}>
-        {icon}
-      </div>
-      <div>
-        <h4 className="text-sm font-medium text-zinc-100">{title}</h4>
-        <p className="text-xs text-zinc-500">{count}</p>
-      </div>
-    </div>
-  )
-}
+// --- SUB COMPONENTS ---
 
-function ScheduleItem({ day, title, status }: { day: string, title: string, status: 'done' | 'missed' | 'upcoming' }) {
-  const getStatusColor = () => {
-    if (status === 'done') return 'bg-emerald-500';
-    if (status === 'missed') return 'bg-zinc-700';
-    return 'bg-zinc-800 border-2 border-zinc-700';
+// 1. Custom Program Builder
+function CustomProgramBuilder({ onCancel, onSave }: { onCancel: () => void, onSave: (p: IAiWorkout) => void }) {
+  const [name, setName] = useState("");
+  const [days, setDays] = useState<IScheduleItem[]>([
+    { day: "Pazartesi", exercises: [] },
+    { day: "Çarşamba", exercises: [] },
+    { day: "Cuma", exercises: [] }
+  ]);
+
+  const addDay = () => setDays([...days, { day: "Yeni Gün", exercises: [] }]);
+
+  const updateDayName = (index: number, newName: string) => {
+    const newDays = [...days];
+    newDays[index].day = newName;
+    setDays(newDays);
   }
 
-  return (
-    <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-zinc-900/50 transition-colors">
-      <div className={`w-3 h-3 rounded-full ${getStatusColor()} shrink-0`}></div>
-      <div className="w-20 text-sm text-zinc-500">{day}</div>
-      <div className={`text-sm font-medium ${status === 'missed' ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>{title}</div>
-    </div>
-  )
-}
+  // Basit bir string input ile egzersiz ekleme (Geliştirilebilir)
+  const addExercise = (dayIndex: number) => {
+    const newDays = [...days];
+    newDays[dayIndex].exercises.push({
+      name: "Yeni Egzersiz",
+      sets: "3",
+      reps: "12",
+      weight: "0",
+      target_sets: "3",
+      target_reps: "12"
+    });
+    setDays(newDays);
+  };
 
-function NutritionCard({ label, value, unit, color }: { label: string, value: number, unit: string, color: string }) {
-  return (
-    <div className={`p-4 rounded-xl border border-zinc-800/50 ${color} bg-opacity-10 backdrop-blur-sm flex flex-col items-center justify-center text-center`}>
-      <span className="text-2xl font-bold mb-1">{value}<span className="text-base font-normal opacity-70 ml-1">{unit}</span></span>
-      <span className="text-xs font-medium uppercase tracking-wider opacity-80">{label}</span>
-    </div>
-  )
-}
+  const updateExercise = (dayIndex: number, exIndex: number, field: keyof IExercisesItem, value: string) => {
+    const newDays = [...days];
+    // @ts-ignore
+    newDays[dayIndex].exercises[exIndex][field] = value;
+    setDays(newDays);
+  };
 
-// Tek bir egzersiz satırını yöneten bileşen
-function ExerciseItem({ exercise, day, onSave }: { exercise: any, day: string, onSave: (d: string, e: string, r: string, s: string) => void }) {
-  const [isOpen, setIsOpen] = useState(false); // Input açık mı?
-  const [userReps, setUserReps] = useState(""); // Kullanıcının yazdığı değer
-  const [userSets, setUserSets] = useState(""); // Kullanıcının yazdığı değer
+  const removeExercise = (dayIndex: number, exIndex: number) => {
+    const newDays = [...days];
+    newDays[dayIndex].exercises.splice(exIndex, 1);
+    setDays(newDays);
+  }
+
+  const removeDay = (dayIndex: number) => {
+    const newDays = [...days];
+    newDays.splice(dayIndex, 1);
+    setDays(newDays);
+  }
 
   const handleSave = () => {
-    if (!userReps || !userSets) {
-      toast.error("Lütfen set ve tekrar sayısını giriniz.");
-      return;
+    if (!name) { toast.error("Program ismi gerekli"); return; }
+    const program: IAiWorkout = {
+      program_name: name,
+      motivation: "Kendi hedeflerin, kendi kuralların.",
+      nutrition_targets: { calories: 2000, protein: 150, carbs: 200, fats: 60 }, // Varsayılanlar
+      daily_commands: ["Bol su iç", "Isınmayı unutma"],
+      schedule: days
     };
-
-    // Parent fonksiyona gönder
-    onSave(day, exercise.name, userReps, userSets);
-
-    // İşlem bitince kapat ve temizle
-    setIsOpen(false);
-    setUserReps("");
-    setUserSets("");
+    onSave(program);
+    toast.success("Program oluşturuldu!");
   };
 
   return (
-    <div className="bg-zinc-950/30 rounded-lg overflow-hidden transition-all duration-300 hover:bg-zinc-950/50 border border-transparent hover:border-zinc-800">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 animate-in zoom-in-95 duration-300">
+      <div className="flex justify-between items-center mb-6 border-b border-zinc-800 pb-4">
+        <h2 className="text-xl font-bold text-white">Özel Program Oluştur</h2>
+        <button onClick={onCancel} className="p-2 hover:bg-zinc-800 rounded-full text-zinc-400"><X size={20} /></button>
+      </div>
 
-      {/* ÜST KISIM: İSİM VE BUTON */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3">
+      <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-zinc-400 mb-1">Program İsmi</label>
+          <input
+            value={name} onChange={e => setName(e.target.value)}
+            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+            placeholder="Örn: 5x5 Güç Programı"
+          />
+        </div>
 
-        {/* Egzersiz İsmi */}
-        <span className="font-medium text-zinc-200 flex-1">{exercise.name}</span>
+        <div className="space-y-4">
+          {days.map((day, dIdx) => (
+            <div key={dIdx} className="bg-zinc-950/50 border border-zinc-800 rounded-xl p-4">
+              <div className="flex justify-between items-center mb-3">
+                <input
+                  value={day.day} onChange={e => updateDayName(dIdx, e.target.value)}
+                  className="bg-transparent text-emerald-400 font-bold focus:outline-none border-b border-dashed border-zinc-700 focus:border-emerald-500"
+                />
+                <button onClick={() => removeDay(dIdx)} className="text-red-500/50 hover:text-red-500"><Trash2 size={16} /></button>
+              </div>
 
-        <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-          {/* Hedef Set/Tekrar Bilgisi */}
-          <div className="flex gap-2 text-xs font-mono shrink-0">
-            <span className="bg-zinc-900 px-2 py-1.5 rounded text-zinc-400 border border-zinc-800">
-              {exercise.sets} Set
-            </span>
-            <span className="bg-zinc-900 px-2 py-1.5 rounded text-zinc-400 border border-zinc-800">
-              {exercise.reps} Tekrar
-            </span>
+              <div className="space-y-2 pl-2 border-l-2 border-zinc-800">
+                {day.exercises.map((ex, exIdx) => (
+                  <div key={exIdx} className="grid grid-cols-12 gap-2 items-center">
+                    <div className="col-span-5">
+                      <input
+                        value={ex.name} onChange={e => updateExercise(dIdx, exIdx, 'name', e.target.value)}
+                        className="w-full bg-zinc-900/50 border border-zinc-800 rounded px-2 py-1 text-xs text-white"
+                        placeholder="Hareket İsmi"
+                      />
+                    </div>
+                    <div className="col-span-3 flex items-center gap-1">
+                      <input
+                        value={ex.sets} onChange={e => updateExercise(dIdx, exIdx, 'sets', e.target.value)}
+                        className="w-full bg-zinc-900/50 border border-zinc-800 rounded px-2 py-1 text-xs text-white text-center"
+                        placeholder="Set"
+                      />
+                      <span className="text-zinc-600 text-[10px]">x</span>
+                    </div>
+                    <div className="col-span-3">
+                      <input
+                        value={ex.reps} onChange={e => updateExercise(dIdx, exIdx, 'reps', e.target.value)}
+                        className="w-full bg-zinc-900/50 border border-zinc-800 rounded px-2 py-1 text-xs text-white text-center"
+                        placeholder="Tekrar"
+                      />
+                    </div>
+                    <div className="col-span-1 flex justify-end">
+                      <button onClick={() => removeExercise(dIdx, exIdx)} className="text-zinc-600 hover:text-red-400"><X size={14} /></button>
+                    </div>
+                  </div>
+                ))}
+                <button onClick={() => addExercise(dIdx)} className="mt-2 text-xs text-blue-400 flex items-center gap-1 hover:underline">
+                  <Plus size={12} /> Egzersiz Ekle
+                </button>
+              </div>
+            </div>
+          ))}
+          <button onClick={addDay} className="w-full py-3 border border-dashed border-zinc-700 rounded-xl text-zinc-500 hover:text-zinc-300 hover:border-zinc-500 transition-colors flex items-center justify-center gap-2">
+            <Plus size={16} /> Gün Ekle
+          </button>
+        </div>
+
+        <div className="flex gap-4 pt-4 border-t border-zinc-800">
+          <button onClick={onCancel} className="flex-1 py-3 text-zinc-400 font-medium hover:text-white transition-colors">Vazgeç</button>
+          <button onClick={handleSave} className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3 rounded-xl transition-colors shadow-lg shadow-emerald-500/20">Programı Kaydet</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+// 2. Updated Exercise Item (Progressive Overload)
+function ExerciseItem({ exercise, day, lastLog, onSave }: { exercise: IExercisesItem, day: string, lastLog: any, onSave: (d: string, e: string, r: string, s: string, w: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [userReps, setUserReps] = useState(exercise.reps || "");
+  const [userSets, setUserSets] = useState(exercise.sets || "");
+  const [userWeight, setUserWeight] = useState(exercise.weight || "");
+
+  const handleSave = () => {
+    if (!userReps || !userSets) {
+      toast.error("Set ve tekrar zorunludur.");
+      return;
+    };
+
+    onSave(day, exercise.name, userReps, userSets, userWeight);
+    toast.success("Kayıt başarılı!", { position: 'bottom-right' });
+    setIsOpen(false);
+  };
+
+  return (
+    <div className={`group transition-all duration-300 ${isOpen ? 'bg-zinc-900/80 -mx-4 px-4 py-4 rounded-xl border border-emerald-500/20 shadow-lg relative z-10 my-2' : 'py-3 hover:bg-zinc-900/30 -mx-4 px-4'}`}>
+
+      {/* Main Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer" onClick={() => !isOpen && setIsOpen(true)}>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h4 className={`text-base font-medium truncate ${isOpen ? 'text-emerald-400' : 'text-zinc-200'}`}>
+              {exercise.name}
+            </h4>
           </div>
 
-          {/* VERİ GİR BUTONU */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className={`p-2 rounded-lg transition-all ${isOpen
-              ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
-              : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-              }`}
-            title="Tekrar Sayısı Gir"
-          >
-            {isOpen ? <X size={18} /> : <NotebookPen size={18} />}
-          </button>
+          {/* PROGRESSIVE OVERLOAD INDICATOR */}
+          <div className="flex items-center gap-3 text-xs">
+            {lastLog ? (
+              <div className="flex items-center gap-1.5 text-zinc-500 bg-zinc-950/50 px-2 py-1 rounded border border-zinc-800/50">
+                <History size={12} className="text-blue-400" />
+                <span>Son:</span>
+                <span className="font-mono text-zinc-300">{lastLog.note}</span>
+              </div>
+            ) : (
+              <div className="text-zinc-600 italic">İlk kez yapılıyor</div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 shrink-0">
+          {/* Target Pill */}
+          <div className="text-center">
+            <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-0.5">Hedef</div>
+            <div className="font-mono text-sm text-zinc-300 bg-zinc-950 px-2 py-1 rounded border border-zinc-800">
+              {exercise.sets}x{exercise.reps}
+            </div>
+          </div>
+
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isOpen ? 'bg-emerald-500 text-black rotate-90' : 'bg-zinc-800 text-zinc-400 group-hover:bg-zinc-700'}`}>
+            <ChevronDown size={18} className='transition-transform' />
+          </div>
         </div>
       </div>
 
-      {/* ALT KISIM: AÇILIR INPUT ALANI */}
+      {/* Expanded Input Area */}
       {isOpen && (
-        <div className="p-3 bg-zinc-900/50 border-t border-zinc-800/50 animate-in slide-in-from-top-2">
-          <div className="flex gap-2">
-            <input
-              type="number"
-              value={userSets}
-              onChange={(e) => setUserSets(e.target.value)}
-              placeholder="Set"
-              className="w-20 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-all placeholder:text-zinc-600"
-            />
-            <input
-              type="number"
-              value={userReps}
-              onChange={(e) => setUserReps(e.target.value)}
-              placeholder="Tekrar"
-              className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-zinc-600"
-              autoFocus
-            />
-            <button
-              onClick={handleSave}
-              className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-4 rounded-lg font-medium transition-colors flex items-center"
-            >
-              <Check size={18} />
+        <div className="mt-4 pt-4 border-t border-zinc-800 animate-in slide-in-from-top-2">
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div>
+              <label className="text-xs text-zinc-500 mb-1 block">Set</label>
+              <input type="number" value={userSets} onChange={e => setUserSets(e.target.value)} className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:border-emerald-500 focus:outline-none transition-colors" placeholder={exercise.sets} />
+            </div>
+            <div>
+              <label className="text-xs text-zinc-500 mb-1 block">Tekrar</label>
+              <input type="number" value={userReps} onChange={e => setUserReps(e.target.value)} className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:border-emerald-500 focus:outline-none transition-colors" placeholder={exercise.reps} />
+            </div>
+            <div>
+              <label className="text-xs text-emerald-500 font-medium mb-1 block">Ağırlık (kg)</label>
+              <input type="number" value={userWeight} onChange={e => setUserWeight(e.target.value)} className="w-full bg-zinc-950 border border-emerald-500/30 rounded-lg px-3 py-2 text-white focus:border-emerald-500 focus:outline-none transition-colors" placeholder="kg?" autoFocus />
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button onClick={() => setIsOpen(false)} className="flex-1 py-2.5 text-zinc-400 hover:text-white transition-colors text-sm">İptal</button>
+            <button onClick={handleSave} className="flex-[2] bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors">
+              <Check size={18} /> Kaydet ve Bitir
             </button>
           </div>
         </div>
