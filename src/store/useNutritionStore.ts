@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
+import { apiClient } from '../services/apiClient';
 import { type IMeal, type IAiWorkout } from '../types/ai-program';
 
 interface NutritionState {
@@ -43,8 +44,7 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
                 set({ loading: true });
             }
 
-            const response = await fetch(`http://localhost:5001/get-meals/${email}`);
-            const data = await response.json();
+            const data = await apiClient.get<any>(`/get-meals/${email}`);
             if (data.meals) {
                 set({ meals: data.meals });
             }
@@ -61,16 +61,15 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
     fetchProgram: async (email) => {
         if (!email) return;
         try {
-            const response = await fetch(`http://localhost:5001/get-program/${email}`);
-            const data = await response.json();
-
-            if (!response.ok || data.message) {
+            const data = await apiClient.get<any>(`/get-program/${email}`);
+            if (data.message) {
                 set({ aiProgram: null });
                 return;
             }
             set({ aiProgram: data });
         } catch (error) {
             console.error("Program alınamadı:", error);
+            set({ aiProgram: null });
         }
     },
 
@@ -87,26 +86,16 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
 
         try {
             // 3. Backend'e isteği at
-            const response = await fetch('http://localhost:5001/update-meal-period', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    mealId: mealId,
-                    period: newPeriod,
-                    email: email
-                })
+            await apiClient.put('/update-meal-period', {
+                mealId: mealId,
+                period: newPeriod,
+                email: email
             });
-
-            if (!response.ok) {
-                throw new Error('Update failed');
-            }
 
             return true;
         } catch (error) {
             console.error("Drag update error:", error);
 
-            // 4. Hata olursa eski haline geri döndür (Rollback)
-            set({ meals: previousMeals });
             // 4. Hata olursa eski haline geri döndür (Rollback)
             set({ meals: previousMeals });
             toast.error("Değişiklik kaydedilemedi, geri alınıyor.");
@@ -125,21 +114,11 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
 
         try {
             // 3. Backend İsteği
-            const response = await fetch('http://localhost:5001/delete-meal', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, mealId })
-            });
-
-            if (!response.ok) {
-                throw new Error('Delete failed');
-            }
+            await apiClient.delete('/delete-meal', { email, mealId });
             return true;
 
         } catch (error) {
             console.error("Delete meal error:", error);
-            // 4. Rollback
-            set({ meals: previousMeals });
             // 4. Rollback
             set({ meals: previousMeals });
             toast.error("Yemek silinemedi.");

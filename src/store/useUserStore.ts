@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
+import { apiClient } from '../services/apiClient';
 
 // Define the shape of the User object (same as in UserContext)
 export interface User {
@@ -83,13 +84,8 @@ export const useUserStore = create<UserState>((set, get) => ({
         if (!currentUser?.email) return;
 
         try {
-            const response = await fetch('http://localhost:5001/sync-fitness-data', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: currentUser.email })
-            });
+            const data = await apiClient.post<{ status: string, data: any }>('/sync-fitness-data', { email: currentUser.email });
 
-            const data = await response.json();
             if (data.status === 'success') {
                 const updatedUser = { ...currentUser, daily_stats: data.data };
                 localStorage.setItem('currentUser', JSON.stringify(updatedUser)); // Update local storage
@@ -103,14 +99,9 @@ export const useUserStore = create<UserState>((set, get) => ({
 
     updateProfile: async (formData: FormData) => {
         try {
-            const response = await fetch('http://localhost:5001/update-profile', {
-                method: 'POST',
-                body: formData
-            });
+            const data = await apiClient.post<{ user: User }>('/update-profile', formData);
 
-            const data = await response.json();
-
-            if (response.ok && data.user) {
+            if (data.user) {
                 const currentUser = get().user;
                 const updatedUser = { ...currentUser, ...data.user };
                 localStorage.setItem('currentUser', JSON.stringify(updatedUser)); // Update local storage

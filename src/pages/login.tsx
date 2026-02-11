@@ -4,6 +4,7 @@ import { Activity, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../context/UserContext';
+import { apiClient } from '../services/apiClient';
 
 
 
@@ -20,31 +21,21 @@ export default function Login() {
     e.preventDefault();
 
     try {
-      const response = await fetch('http://localhost:5001/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+      const data = await apiClient.post<{ user: any }>('/login', { email, password });
 
-      const data = await response.json();
+      // UPDATE CONTEXT STATE
+      login(data.user);
+      toast.success("Giriş Başarılı! Hoşgeldin " + data.user.fullName);
 
-      if (response.ok) {
-        // UPDATE CONTEXT STATE
-        login(data.user);
-        toast.success("Giriş Başarılı! Hoşgeldin " + data.user.fullName);
-
-        if (data.user.filled) {
-          navigate('/');
-        } else {
-          navigate('/user-info');
-        }
-
+      if (data.user.filled) {
+        navigate('/');
       } else {
-        toast.error("Hata: " + data.message);
+        navigate('/user-info');
       }
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("Login hatası:", error);
-      toast.error("Sunucu hatası.");
+      toast.error("Hata: " + (error.message || "Sunucu hatası."));
     }
   }
 

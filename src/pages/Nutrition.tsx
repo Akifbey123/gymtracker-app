@@ -81,7 +81,7 @@ function MealCard({ meal, index, aiProgram }: { meal: IMeal; index: number, aiPr
 // 2. MealColumn
 function MealColumn({ title, meals, periodId, aiProgram, }: { title: string; meals: IMeal[]; periodId: string, aiProgram: IAiWorkout | null }) {
   return (
-    <div className="flex flex-col bg-zinc-950/50 rounded-2xl border border-zinc-900 min-h-[200px] w-full">
+    <div className="flex flex-col bg-zinc-950/50 rounded-2xl border border-zinc-900 min-h-[120px] lg:min-h-[200px] w-full">
       <div className="p-4 border-b border-zinc-900 flex justify-between items-center">
         <h3 className="font-bold text-zinc-300 text-sm">{title}</h3>
         <span className="bg-zinc-900 text-zinc-500 text-xs px-2 py-0.5 rounded-full font-mono">
@@ -195,7 +195,7 @@ export default function NutritionView() {
   if (loading) return <div className="text-zinc-500 text-sm text-center mt-10">Yükleniyor...</div>;
 
   return (
-    <div className="w-full max-w-7xl mx-auto mt-6 px-4 pb-12">
+    <div style={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden', boxSizing: 'border-box' }} className="max-w-7xl mx-auto mt-6 px-4 lg:px-8 pb-12 space-y-4 lg:space-y-6">
       {/* Üst Kısım: Takvim */}
       <div className="mb-8">
         <h3 className="text-xl font-bold text-zinc-100 text-center mb-6">Yemek Planı</h3>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { Activity, Mail, Lock, Eye, EyeOff, ArrowRight, User, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { apiClient } from '../services/apiClient';
 
 export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
@@ -35,31 +36,19 @@ export default function Register() {
 
     try {
       // Backend'e istek atıyoruz (Port 5000)
-      const response = await fetch('http://localhost:5001/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fullName: formData.fullName,
-          email: formData.email,
-          password: formData.password
-        }),
+      const data = await apiClient.post<{ message: string, user: any }>('/register', {
+        fullName: formData.fullName,
+        email: formData.email,
+        password: formData.password
       });
 
-      const data = await response.json();
+      toast.success("Kayıt Başarılı! Giriş sayfasına yönlendiriliyorsunuz...");
+      console.log(data);
+      // Burada yönlendirme yapabilirsin: navigate('/login')
 
-      if (response.ok) {
-        toast.success("Kayıt Başarılı! Giriş sayfasına yönlendiriliyorsunuz...");
-        console.log(data);
-        // Burada yönlendirme yapabilirsin: navigate('/login')
-      } else {
-        toast.error("Hata: " + data.message);
-      }
-
-    } catch (error) {
+    } catch (error: any) {
       console.error("Bağlantı hatası:", error);
-      toast.error("Sunucuya bağlanılamadı.");
+      toast.error("Hata: " + (error.message || "Sunucuya bağlanılamadı."));
     }
   }
 

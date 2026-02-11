@@ -68,7 +68,7 @@ export default function SettingsView() {
   return (
     <>
       <Header title="Ayarlar" subtitle="Hesap" />
-      <div className="px-5 lg:px-8 py-6 space-y-6 max-w-2xl mx-auto lg:mx-0">
+      <div className="px-4 lg:px-8 py-4 lg:py-6 space-y-4 lg:space-y-6 max-w-2xl mx-auto lg:mx-0">
 
         {/* Profile Section */}
         <section className="bg-zinc-900/60 border border-zinc-800/50 rounded-2xl p-6 flex items-center gap-4">

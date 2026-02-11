@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/UserContext'; // Kullanıcının emailini almak için
 import { Ruler, Weight, Activity, Percent, Target, ArrowRight, Check } from 'lucide-react';
+import { apiClient } from '../services/apiClient';
 
 export default function UserInfoForm() {
     const { user, login } = useAuth(); // Context'ten user verisini alıyoruz
@@ -57,35 +58,25 @@ export default function UserInfoForm() {
 
         try {
             // Backend'e verileri gönder
-            const response = await fetch('http://localhost:5001/save-user-info', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: user.email, // Hangi kullanıcı olduğunu belirtmek için email şart
-                    height: Number(formData.height),
-                    weight: Number(formData.weight),
-                    bodyFat: Number(formData.bodyFat),
-                    activityLevel: Number(formData.activityLevel),
-                    goals: formData.goals
-                }),
+            const data = await apiClient.post<{ user: any }>('/save-user-info', {
+                email: user.email, // Hangi kullanıcı olduğunu belirtmek için email şart
+                height: Number(formData.height),
+                weight: Number(formData.weight),
+                bodyFat: Number(formData.bodyFat),
+                activityLevel: Number(formData.activityLevel),
+                goals: formData.goals
             });
 
-            const data = await response.json();
+            // Context'teki kullanıcı bilgisini güncelle (yeni boy/kilo bilgileriyle)
+            login(data.user);
 
-            if (response.ok) {
-                // Context'teki kullanıcı bilgisini güncelle (yeni boy/kilo bilgileriyle)
-                login(data.user);
+            // İşlem tamam, Dashboard'a yönlendir
+            navigate('/');
+            toast.success("Bilgileriniz kaydedildi!");
 
-                // İşlem tamam, Dashboard'a yönlendir
-                navigate('/');
-                toast.success("Bilgileriniz kaydedildi!");
-            } else {
-                toast.error("Hata: " + data.message);
-            }
-
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            toast.error("Sunucuya bağlanılamadı.");
+            toast.error("Hata: " + (error.message || "Sunucuya bağlanılamadı."));
         } finally {
             setLoading(false);
         }

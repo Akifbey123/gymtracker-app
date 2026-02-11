@@ -26,6 +26,21 @@ export default function FitnessDashboard() {
     if (path.includes('/settings')) return "settings";
     return "";
   }
+  const scrollToCamera = () => setTimeout(() => {
+    document.getElementById("cameraSection")?.scrollIntoView({ behavior: "smooth" });
+    console.log("cameraSection scrolled");
+  }, 500);
+  const clickAddPhotoButton = () => setTimeout(() => {
+    document.getElementById("addPhotoButton")?.click();
+    console.log("addPhotoButton clicked");
+
+  }, 950);
+
+  const goToCamera = () => {
+    navigate("/home");
+    scrollToCamera();
+    clickAddPhotoButton();
+  }
 
   const activeTab = getActiveTab();
 
@@ -34,7 +49,7 @@ export default function FitnessDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans overflow-x-hidden">
       <div className="flex min-h-screen relative">
 
         {/* --- MASAÜSTÜ YAN MENÜ --- */}
@@ -74,7 +89,8 @@ export default function FitnessDashboard() {
           <MobileNavItem icon={<Home size={22} />} label="Ana Sayfa" active={activeTab === "home"} onClick={() => handleNavigation("/home")} />
           <MobileNavItem icon={<Dumbbell size={22} />} label="Antrenman" active={activeTab === "workout"} onClick={() => handleNavigation("/workout")} />
 
-          <button className="relative -top-4 w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-zinc-950 shadow-lg shadow-emerald-500/25">
+          <button onClick={goToCamera}
+            className="relative -top-4 w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-zinc-950 shadow-lg shadow-emerald-500/25">
             <Camera size={24} />
           </button>
 

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
+import { apiClient } from '../services/apiClient';
 import { type IAiWorkout } from '../types/ai-program';
 
 interface WorkoutState {
@@ -31,40 +32,29 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
 
     fetchProgram: async (email) => {
         try {
-            const response = await fetch(`http://localhost:5001/get-program/${email}`)
-            const data = await response.json()
-            if (!response.ok || data.message) {
-                set({ aiProgram: null })
-                return
+            const data = await apiClient.get<any>(`/get-program/${email}`);
+            if (data.message) {
+                set({ aiProgram: null });
+                return;
             }
-            set({ aiProgram: data })
+            set({ aiProgram: data });
         } catch (error) {
             console.error("Program alınamadı:", error);
+            set({ aiProgram: null });
         }
     },
 
     generateProgram: async (user) => {
         set({ loading: true });
         try {
-            const response = await fetch('http://localhost:5001/generate-program', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    height: user.height || 175,
-                    weight: user.weight || 75,
-                    goals: user.goals || ["Genel"],
-                    activityLevel: user.activityLevel || 3,
-                    email: user.email
-                }),
+            const data = await apiClient.post<{ result: IAiWorkout }>('/generate-program', {
+                height: user.height || 175,
+                weight: user.weight || 75,
+                goals: user.goals || ["Genel"],
+                activityLevel: user.activityLevel || 3,
+                email: user.email
             });
 
-            if (!response.ok) {
-                throw new Error('Program oluşturulamadı');
-            }
-
-            const data = await response.json();
             set({ aiProgram: data.result });
 
         } catch (error) {
@@ -77,26 +67,20 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
 
     saveLog: async (logData, callback) => {
         try {
-            const response = await fetch('http://localhost:5001/save-log', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: logData.email,
-                    day: logData.day,
-                    exercise: logData.exercise,
-                    weight: logData.weight,
-                    reps: logData.reps,
-                    sets: logData.sets,
-                    note: `${logData.sets} set, ${logData.reps} tekrar${logData.weight ? `, ${logData.weight}kg` : ''}`
-                }),
+            const data = await apiClient.post<{ logs: any[] }>('/save-log', {
+                email: logData.email,
+                day: logData.day,
+                exercise: logData.exercise,
+                weight: logData.weight,
+                reps: logData.reps,
+                sets: logData.sets,
+                note: `${logData.sets} set, ${logData.reps} tekrar${logData.weight ? `, ${logData.weight}kg` : ''}`
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                set({ workoutLogs: data.logs });
-                if (callback) callback(data.logs);
-                toast.success("Kaydedildi!");
-            }
+            set({ workoutLogs: data.logs });
+            if (callback) callback(data.logs);
+            toast.success("Kaydedildi!");
+
         } catch (error) {
             console.error("Kayıt hatası", error);
         }
@@ -104,18 +88,7 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
 
     saveProgramToBackend: async (email: string, program: IAiWorkout) => {
         try {
-            const response = await fetch('http://localhost:5001/save-program', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email,
-                    program
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error("Program kaydedilemedi");
-            }
+            await apiClient.post('/save-program', { email, program });
 
             // Başarılı olursa store'u güncelle (zaten güncel olabilir ama emin olalım)
             set({ aiProgram: program });
@@ -129,18 +102,8 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
 
     addExerciseToProgram: async ({ email, day, exercises }) => {
         try {
-            const response = await fetch('http://localhost:5001/program/add-exercise', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, day, exercises })
-            });
+            const data = await apiClient.post<{ program: IAiWorkout }>('/program/add-exercise', { email, day, exercises });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || "Egzersiz eklenemedi");
-            }
-
-            const data = await response.json();
             if (data.program) {
                 set({ aiProgram: data.program });
                 toast.success("Egzersiz başarıyla eklendi!");

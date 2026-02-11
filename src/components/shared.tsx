@@ -6,17 +6,14 @@ import { useUserStore } from '../store/useUserStore';
 export function Header({ title, subtitle, showProfileOnMobile = false }: { title: string, subtitle: string, showProfileOnMobile?: boolean }) {
   const { user } = useUserStore();
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between px-5 py-4 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/50 lg:px-8 lg:py-5">
+    <header className="sticky top-0 z-30 flex items-center justify-between px-4 lg:px-8 py-4 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/50">
       <div>
         <p className="text-zinc-500 text-sm mb-0.5">{subtitle}</p>
-        <h1 className="text-xl font-semibold tracking-tight lg:text-2xl text-zinc-100">{title}</h1>
+        <h1 className="text-xl font-semibold tracking-tight lg:text-2xl text-zinc-100 uppercase">{title}</h1>
       </div>
 
       <div className="flex items-center gap-3">
-        <button className="p-2.5 bg-zinc-800/80 rounded-full hover:bg-zinc-700 transition-colors relative">
-          <Bell size={18} className="text-zinc-400" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full" />
-        </button>
+
         {showProfileOnMobile && (
           <div className="w-9 h-9 rounded-full bg-zinc-800 overflow-hidden lg:hidden">
             <img
@@ -35,12 +32,12 @@ export function Header({ title, subtitle, showProfileOnMobile = false }: { title
 export function MacroBar({ label, current, total, colorClass }: { label: string; current: number; total: number; colorClass: string }) {
   const percentage = (current / total) * 100
   return (
-    <div className="flex items-center gap-3">
-      <span className="w-24 text-sm text-zinc-500">{label}</span>
-      <div className="flex-1 h-2 bg-zinc-800 rounded-full overflow-hidden">
-        <div className={`h-full ${colorClass} rounded-full transition-all`} style={{ width: `${percentage}%` }} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', maxWidth: '100%', overflow: 'hidden' }}>
+      <span style={{ width: '80px', flexShrink: 0, fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} className="text-zinc-500">{label}</span>
+      <div style={{ flex: 1, minWidth: 0, height: '8px', borderRadius: '9999px', overflow: 'hidden' }} className="bg-zinc-800">
+        <div className={`h-full ${colorClass} rounded-full transition-all`} style={{ width: `${Math.min(percentage, 100)}%` }} />
       </div>
-      <span className="w-16 text-sm text-right tabular-nums text-zinc-400">
+      <span style={{ width: '55px', flexShrink: 0, fontSize: '12px', textAlign: 'right', whiteSpace: 'nowrap' }} className="tabular-nums text-zinc-400">
         {current}<span className="text-zinc-600">/{total}g</span>
       </span>
     </div>
@@ -50,7 +47,7 @@ export function MacroBar({ label, current, total, colorClass }: { label: string;
 // --- İstatistik Kartı ---
 export function StatCard({ icon, label, value, subtitle, colorClass }: { icon: React.ReactNode; label: string; value: string; subtitle: string; colorClass: string }) {
   return (
-    <div className="bg-zinc-900/60 border border-zinc-800/50 rounded-xl p-4 hover:bg-zinc-900 transition-colors">
+    <div className="bg-zinc-900/60 border border-zinc-800/50 rounded-xl p-3 lg:p-4 hover:bg-zinc-900 transition-colors">
       <div className={`w-9 h-9 ${colorClass} rounded-lg flex items-center justify-center mb-3`}>
         {icon}
       </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Mic, Square, Loader2 } from "lucide-react";
 import { useUserStore } from "../store/useUserStore";
+import { apiClient } from "../services/apiClient";
 
 export default function FreeVoiceAssistant() {
   const [isListening, setIsListening] = useState(false);
@@ -54,16 +55,11 @@ export default function FreeVoiceAssistant() {
 
     try {
       // DİKKAT: method: "POST" ekledik
-      const res = await fetch("http://localhost:5001/chat-ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: text,
-          email: user?.email
-        })
+      // DİKKAT: method: "POST" ekledik
+      const data = await apiClient.post<{ reply: string, audioUrl?: string }>("/chat-ai", {
+        message: text,
+        email: user?.email
       });
-
-      const data = await res.json();
 
       // Backend'den gelen metni ekrana yaz
       setAiText(`AI: ${data.reply}`);
@@ -105,7 +101,7 @@ export default function FreeVoiceAssistant() {
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 p-6 bg-zinc-900 rounded-2xl border border-zinc-800 animate-in fade-in duration-500 w-full max-w-md mx-auto">
+    <div className="flex flex-col items-center gap-4 p-4 lg:p-6 bg-zinc-900 rounded-2xl border border-zinc-800 animate-in fade-in duration-500 w-full max-w-md mx-auto mt-6">
 
       {/* Metin Alanı */}
       <div className="h-40 w-full overflow-y-auto text-center text-zinc-300 text-sm p-4 bg-zinc-950/50 rounded-xl border border-zinc-800/50 flex items-center justify-center">
