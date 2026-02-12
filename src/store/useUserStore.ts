@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
 import { apiClient } from '../services/apiClient';
+import type { IWorkoutLog } from '../types/ai-program';
 
 // Define the shape of the User object (same as in UserContext)
 export interface User {
@@ -14,12 +15,7 @@ export interface User {
     goals?: string[];
     period?: string;
     filled?: boolean;
-    workoutLogs?: {
-        date: Date;
-        day: string;
-        exercise: string;
-        note: string;
-    }[];
+    workoutLogs?: IWorkoutLog[];
     daily_stats?: {
         date: string;
         steps: number;

@@ -49,3 +49,10 @@ export interface IMeal {
     date: string;
     period: string;
 }
+
+export interface IWorkoutLog {
+    _id: string;
+    exercise: string;
+    sets: { reps: number; weight: number }[];
+    date: string;
+}

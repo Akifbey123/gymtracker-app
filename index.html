@@ -1,13 +1,29 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GymTracker by Akif Karabay</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>GymTracker by Akif Karabay</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script>document.addEventListener('gesturestart', function (e) {
+      e.preventDefault();
+    });
+
+    // İki parmakla hareket (gesturechange) sırasında engelle
+    document.addEventListener('gesturechange', function (e) {
+      e.preventDefault();
+    });
+
+    // İki parmak bitişinde (gestureend) engelle
+    document.addEventListener('gestureend', function (e) {
+      e.preventDefault();
+    });</script>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

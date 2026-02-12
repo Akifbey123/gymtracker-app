@@ -89,9 +89,9 @@ export default function WorkoutView() {
   }, [user, aiProgram]);
 
 
-  const handleSaveLog = async (day: string, exercise: string, reps: string, sets: string, weight?: string) => {
+  const handleSaveLog = async (day: string, exercise: string, sets: { reps: number, weight: number }[]) => {
     if (!user?.email) return;
-    await saveLog({ email: user.email, day, exercise, reps, sets, weight }, (newLogs) => {
+    await saveLog({ email: user.email, day, exercise, sets }, (newLogs) => {
       if (user) login({ ...user, workoutLogs: newLogs });
     });
   };
@@ -238,6 +238,10 @@ export default function WorkoutView() {
                           <div className="space-y-2">
                             {day.exercises.map((ex, i) => {
                               const lastLog = getLastLog(ex.name);
+
+
+
+
                               return (
                                 <ExerciseItem
                                   key={i}
@@ -293,18 +297,38 @@ export default function WorkoutView() {
         {/* History Section */}
         {workoutLogs.length > 0 && (
           <section className="mx-4 mt-6 mb-10">
-            <h3 className="text-lg font-semibold text-zinc-200 mb-3 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-zinc-200 mb-4 flex items-center gap-2">
               <Activity size={20} className="text-emerald-500" /> Son Aktiviteler
             </h3>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {[...workoutLogs].reverse().slice(0, 5).map((log: any, i: number) => (
-                <div key={i} className="flex flex-col p-3 rounded-xl bg-zinc-950/30 border border-zinc-800/50 gap-1 overflow-hidden">
-                  <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5">
-                    <div className="text-sm font-medium text-white truncate">{log.exercise}</div>
-                    <div className="text-[10px] text-zinc-500 shrink-0">{new Date(log.date).toLocaleDateString()}</div>
+                <div key={i} className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 transition-all hover:bg-zinc-900/80">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h4 className="font-semibold text-zinc-100 text-base">{log.exercise}</h4>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <Clock size={12} className="text-zinc-500" />
+                        <span className="text-xs text-zinc-500">{new Date(log.date).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    {/* Optional: Add a small icon or badge here if needed */}
                   </div>
-                  <div className="text-xs font-mono text-emerald-400 break-all">
-                    {log.note}
+
+                  <div className="space-y-1.5">
+                    {log.sets && log.sets.length > 0 ? (
+                      log.sets.map((set: any, idx: number) => (
+                        <div key={idx} className="flex justify-between items-center text-sm py-1.5 border-b border-zinc-800/50 last:border-0 last:pb-0">
+                          <span className="text-zinc-500 font-medium text-xs bg-zinc-800/50 px-2 py-0.5 rounded">Set {idx + 1}</span>
+                          <span className="font-mono text-zinc-300">
+                            <span className="text-emerald-400 font-bold">{set.reps}</span> reps
+                            <span className="text-zinc-600 mx-2">•</span>
+                            <span className="text-white font-bold">{set.weight}</span> kg
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-zinc-500 italic text-sm">Detay yok</span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -328,12 +352,12 @@ function CustomProgramBuilder({ onCancel, onSave }: { onCancel: () => void, onSa
 }
 
 // 2. OPTIMIZE EDILMIS EXERCISE ITEM
-function ExerciseItem({ exercise, day, lastLog, onSave }: { exercise: IExercisesItem, day: string, lastLog: any, onSave: (d: string, e: string, r: string, s: string, w: string) => void }) {
+function ExerciseItem({ exercise, day, lastLog, onSave }: { exercise: IExercisesItem, day: string, lastLog: any, onSave: (d: string, e: string, sets: { reps: number, weight: number }[]) => void }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const initialSetCount = parseInt(exercise.sets?.split('-')[0] || "3", 10) || 3;
   const [setsData, setSetsData] = useState<{ weight: string, reps: string }[]>(
-    Array(initialSetCount).fill({ weight: "", reps: exercise.reps || "" })
+    Array.from({ length: initialSetCount }, () => ({ weight: "", reps: exercise.reps || "" }))
   );
 
   const handleAddSet = () => {
@@ -355,15 +379,25 @@ function ExerciseItem({ exercise, day, lastLog, onSave }: { exercise: IExercises
   };
 
   const handleSave = () => {
-    const validSets = setsData;
+    const validSets = setsData.map(s => ({
+      reps: parseInt(s.reps || "0", 10),
+      weight: parseFloat(s.weight || "0")
+    })).filter(s => s.reps > 0);
+
     if (validSets.length === 0) return;
-    const setsStr = validSets.length.toString();
-    const repsStr = validSets.map(s => s.reps || "0").join("/");
-    const weightStr = validSets.map(s => s.weight || "0").join("/");
-    onSave(day, exercise.name, repsStr, setsStr, weightStr);
+
+    onSave(day, exercise.name, validSets);
     toast.success("Kayıt başarılı!", { position: 'bottom-center' });
     setIsOpen(false);
   };
+
+  const exName = exercise.name;
+  const maxWeight = (lastLog && lastLog.sets && lastLog.sets.length > 0)
+    ? Math.max(...lastLog.sets.map((s: any) => s.weight))
+    : 0;
+  const logSummary = (lastLog?.sets && lastLog.sets.length > 0)
+    ? `${lastLog.sets.length} Sets • Max ${maxWeight}kg`
+    : "Legacy Log";
 
   return (
     <div
@@ -377,12 +411,13 @@ function ExerciseItem({ exercise, day, lastLog, onSave }: { exercise: IExercises
         className="cursor-pointer touch-manipulation"
         onClick={() => setIsOpen(!isOpen)}
       >
+
         <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
           <h4
             className={`font-medium truncate ${isOpen ? 'text-emerald-400' : 'text-zinc-200'}`}
             style={{ fontSize: '15px', marginBottom: '4px' }}
           >
-            {exercise.name}
+            {exName}
           </h4>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             {lastLog ? (
@@ -391,7 +426,9 @@ function ExerciseItem({ exercise, day, lastLog, onSave }: { exercise: IExercises
                 className="text-zinc-500 bg-zinc-950/50 px-1.5 py-0.5 rounded border border-zinc-800/50"
               >
                 <History size={10} className="text-blue-400" style={{ flexShrink: 0 }} />
-                <span className="font-mono text-zinc-300" style={{ fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lastLog.note}</span>
+                <span className="font-mono text-zinc-300" style={{ fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {logSummary}
+                </span>
               </div>
             ) : (
               <span className="text-zinc-600 italic" style={{ fontSize: '10px' }}>Yeni</span>

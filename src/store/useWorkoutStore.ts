@@ -1,21 +1,21 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
 import { apiClient } from '../services/apiClient';
-import { type IAiWorkout } from '../types/ai-program';
+import { type IAiWorkout, type IWorkoutLog } from '../types/ai-program';
 
 interface WorkoutState {
     aiProgram: IAiWorkout | null;
-    workoutLogs: any[]; // Using any[] for now as per original code, should improve type later
+    workoutLogs: IWorkoutLog[]; // Using any[] for now as per original code, should improve type later
     loading: boolean;
 
     setAiProgram: (program: IAiWorkout | null) => void;
-    setWorkoutLogs: (logs: any[]) => void;
+    setWorkoutLogs: (logs: IWorkoutLog[]) => void;
     setLoading: (loading: boolean) => void;
 
     fetchProgram: (email: string) => Promise<void>;
     setProgram: (program: IAiWorkout) => void;
     generateProgram: (user: any) => Promise<void>;
-    saveLog: (data: { email: string, day: string, exercise: string, reps: string, sets: string, weight?: string }, callback?: (logs: any[]) => void) => Promise<void>;
+    saveLog: (data: { email: string, day: string, exercise: string, sets: { reps: number, weight: number }[] }, callback?: (logs: IWorkoutLog[]) => void) => Promise<void>;
     saveProgramToBackend: (email: string, program: IAiWorkout) => Promise<void>;
     addExerciseToProgram: (data: { email: string, day: string, exercises: any[] }) => Promise<void>;
 }
@@ -67,14 +67,11 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
 
     saveLog: async (logData, callback) => {
         try {
-            const data = await apiClient.post<{ logs: any[] }>('/save-log', {
+            const data = await apiClient.post<{ logs: IWorkoutLog[] }>('/save-log', {
                 email: logData.email,
                 day: logData.day,
                 exercise: logData.exercise,
-                weight: logData.weight,
-                reps: logData.reps,
-                sets: logData.sets,
-                note: `${logData.sets} set, ${logData.reps} tekrar${logData.weight ? `, ${logData.weight}kg` : ''}`
+                sets: logData.sets
             });
 
             set({ workoutLogs: data.logs });

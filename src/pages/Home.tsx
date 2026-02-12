@@ -10,7 +10,8 @@ import { Upload } from 'lucide-react';
 import { useNutritionStore } from '../store/useNutritionStore';
 import { isSameDay, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { apiClient } from '../services/apiClient';
-
+import HomeProgressRings from '../components/HomeProgressRings';
+import Leaderboard from '../components/Leaderboard';
 // removed unused import
 
 
@@ -30,7 +31,20 @@ export default function HomeView() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isAnalyzeLoading, setIsAnalyzeLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [categories, setCategories] = useState<any>([]);
+  const [loading, setLoading] = useState(true);
 
+
+  /* 
+  useEffect(() => {
+    // API çağrısını kendine göre düzenle
+    apiClient.get<any>('/categories')
+      .then(res => setCategories(res.data))
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+  */
+  // if (loading) return <div className="text-white text-center p-10">Loading...</div>;
 
   const handleClose = () => {
     setNutritionData(null);
@@ -309,84 +323,62 @@ export default function HomeView() {
     <>
       <Header title={`${currentUser?.fullName}`} subtitle="Günaydın," showProfileOnMobile={true} />
       <div style={{ maxWidth: '100vw', overflowX: 'hidden', boxSizing: 'border-box' }} className="px-4 lg:px-8 py-4 lg:py-6 space-y-4 lg:space-y-6 max-w-6xl mx-auto">
-        {/* Haftalık Kalori Özeti */}
-        <section className="bg-zinc-900/60 border border-zinc-800/50 rounded-2xl p-6 lg:p-8">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-12">
-            {/* Progress Ring */}
-            <div className="relative w-32 h-32 lg:w-44 lg:h-44 mx-auto lg:mx-0 shrink-0">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#27272a" strokeWidth="6" />
-                <circle cx="50" cy="50" r="42" fill="none" stroke={calorieDiff > 0 ? '#ef4444' : '#10b981'} strokeWidth="6" strokeLinecap="round" strokeDasharray="264" strokeDashoffset={ringStrokeDashoffset} className="transition-all duration-700" />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl lg:text-4xl font-bold text-zinc-100">{Math.round(weeklyPercentage)}%</span>
-                <span className="text-[10px] lg:text-xs text-zinc-500 uppercase tracking-wider">Weekly Calories</span>
-              </div>
-            </div>
-            {/* protein */}
-            <div className="relative w-32 h-32 lg:w-44 lg:h-44 mx-auto lg:mx-0 shrink-0">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#27272a" strokeWidth="6" />
-                <circle cx="50" cy="50" r="42" fill="none" stroke={weeklyProteinDiff > 0 ? '#ef4444' : '#10b981'} strokeWidth="6" strokeLinecap="round" strokeDasharray="264" strokeDashoffset={weeklyProteinRingStrokeDashoffset} className="transition-all duration-700" />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl lg:text-4xl font-bold text-zinc-100">{Math.round(weeklyProteinPercentage)}%</span>
-                <span className="text-[10px] lg:text-xs text-zinc-500 uppercase tracking-wider">Weekly Protein</span>
-              </div>
-            </div>
-            {/* carbs */}
-            <div className="relative w-32 h-32 lg:w-44 lg:h-44 mx-auto lg:mx-0 shrink-0">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#27272a" strokeWidth="6" />
-                <circle cx="50" cy="50" r="42" fill="none" stroke={weeklyCarbDiff > 0 ? '#ef4444' : '#10b981'} strokeWidth="6" strokeLinecap="round" strokeDasharray="264" strokeDashoffset={weeklyCarbRingStrokeDashoffset} className="transition-all duration-700" />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl lg:text-4xl font-bold text-zinc-100">{Math.round(weeklyCarbPercentage)}%</span>
-                <span className="text-[10px] lg:text-xs text-zinc-500 uppercase tracking-wider">Weekly Carbs</span>
-              </div>
-            </div>
-            {/*yağ*/}
-            <div className="relative w-32 h-32 lg:w-44 lg:h-44 mx-auto lg:mx-0 shrink-0">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#27272a" strokeWidth="6" />
-                <circle cx="50" cy="50" r="42" fill="none" stroke={weeklyFatDiff > 0 ? '#ef4444' : '#10b981'} strokeWidth="6" strokeLinecap="round" strokeDasharray="264" strokeDashoffset={weeklyFatRingStrokeDashoffset} className="transition-all duration-700" />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl lg:text-4xl font-bold text-zinc-100">{Math.round(weeklyFatPercentage)}%</span>
-                <span className="text-[10px] lg:text-xs text-zinc-500 uppercase tracking-wider">Weekly Fat</span>
-              </div>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 items-stretch">
+          {/* Haftalık Kalori Özeti */}
+          <section className="bg-zinc-900/60 border border-zinc-800/50 rounded-2xl p-6 lg:p-8 flex flex-col justify-center">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-12">
+              {/* Progress Rings Component */}
+              <HomeProgressRings
+                weeklyPercentage={weeklyPercentage}
+                calorieDiff={calorieDiff}
+                ringStrokeDashoffset={ringStrokeDashoffset}
+                weeklyProteinDiff={weeklyProteinDiff}
+                weeklyProteinRingStrokeDashoffset={weeklyProteinRingStrokeDashoffset}
+                weeklyProteinPercentage={weeklyProteinPercentage}
+                weeklyCarbDiff={weeklyCarbDiff}
+                weeklyCarbRingStrokeDashoffset={weeklyCarbRingStrokeDashoffset}
+                weeklyCarbPercentage={weeklyCarbPercentage}
+                weeklyFatDiff={weeklyFatDiff}
+                weeklyFatRingStrokeDashoffset={weeklyFatRingStrokeDashoffset}
+                weeklyFatPercentage={weeklyFatPercentage}
+              />
 
 
-            {/* Info */}
-            <div className="flex-1 text-center lg:text-left">
-              <span className="inline-block px-2.5 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-full mb-3">
-                Haftalık Kalori Özeti
-              </span>
+              {/* Info */}
+              <div className="flex-1 text-center lg:text-left">
+                <span className="inline-block px-2.5 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-full mb-3">
+                  Haftalık Kalori Özeti
+                </span>
 
-              <div className="flex items-baseline gap-2 justify-center lg:justify-start mb-1">
-                <span className="text-2xl lg:text-3xl font-bold text-zinc-100">{weeklyCaloriesConsumed.toLocaleString()}</span>
-                <span className="text-sm text-zinc-500">/ {weeklyCalorieTarget.toLocaleString()} kcal</span>
+                <div className="flex items-baseline gap-2 justify-center lg:justify-start mb-1">
+                  <span className="text-2xl lg:text-3xl font-bold text-zinc-100">{weeklyCaloriesConsumed.toLocaleString()}</span>
+                  <span className="text-sm text-zinc-500">/ {weeklyCalorieTarget.toLocaleString()} kcal</span>
+                </div>
+
+                <p className={`text-sm font-semibold mb-4 ${calorieDiff > 0 ? 'text-red-400' : calorieDiff === 0 ? 'text-emerald-400' : 'text-sky-400'}`}>
+                  {calorieDiff > 0
+                    ? `⚠️ ${calorieDiff.toLocaleString()} kcal fazla aldın`
+                    : calorieDiff === 0
+                      ? '✅ Hedefe tam ulaştın!'
+                      : `🎯 ${Math.abs(calorieDiff).toLocaleString()} kcal daha alabilirsin`
+                  }
+                </p>
+
+                <button
+                  onClick={() => navigate('/Workout')}
+                  className="inline-flex items-center gap-2 bg-zinc-100 text-zinc-950 px-5 py-2.5 rounded-full text-sm font-medium hover:bg-white transition-colors">
+                  <Play size={16} fill="currentColor" />
+                  Antrenmanı Başlat
+                </button>
               </div>
-
-              <p className={`text-sm font-semibold mb-4 ${calorieDiff > 0 ? 'text-red-400' : calorieDiff === 0 ? 'text-emerald-400' : 'text-sky-400'}`}>
-                {calorieDiff > 0
-                  ? `⚠️ ${calorieDiff.toLocaleString()} kcal fazla aldın`
-                  : calorieDiff === 0
-                    ? '✅ Hedefe tam ulaştın!'
-                    : `🎯 ${Math.abs(calorieDiff).toLocaleString()} kcal daha alabilirsin`
-                }
-              </p>
-
-              <button
-                onClick={() => navigate('/Workout')}
-                className="inline-flex items-center gap-2 bg-zinc-100 text-zinc-950 px-5 py-2.5 rounded-full text-sm font-medium hover:bg-white transition-colors">
-                <Play size={16} fill="currentColor" />
-                Antrenmanı Başlat
-              </button>
             </div>
+          </section>
+
+          {/* Leaderboard - Desktop'ta yan yana, Mobilde alt alta */}
+          <div className="w-full h-full min-h-[300px]">
+            <Leaderboard />
           </div>
-        </section>
+        </div>
 
         {/* Stats Grid */}
         <section>
