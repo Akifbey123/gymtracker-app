@@ -85,6 +85,7 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
 
     saveProgramToBackend: async (email: string, program: IAiWorkout) => {
         try {
+            console.log(program);
             await apiClient.post('/save-program', { email, program });
 
             // Başarılı olursa store'u güncelle (zaten güncel olabilir ama emin olalım)

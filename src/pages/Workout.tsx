@@ -6,18 +6,20 @@ import { useWorkoutStore } from '../store/useWorkoutStore';
 import { useEffect, useMemo, useState } from 'react';
 import { type IAiWorkout, type IScheduleItem, type IExercisesItem } from '../types/ai-program';
 
+const initialExercises = [
+  "Squat", "Deadlift", "Bench Press", "Overhead Press",
+  "Pull Up", "Dumbbell Row", "Lat Pulldown", "Push Up",
+  "Lunges", "Leg Press", "Leg Extension", "Leg Curl",
+  "Face Pull", "Lateral Raise", "Bicep Curl", "Tricep Extension",
+  "Plank", "Crunch", "Russian Twist"
+];
+
 export default function WorkoutView() {
   const { user, login } = useAuth();
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [activeDayTab, setActiveDayTab] = useState<string>("");
   const [isOpen, setIsOpen] = useState(false);
-  const initialExercises = [
-    "Squat", "Deadlift", "Bench Press", "Overhead Press",
-    "Pull Up", "Dumbbell Row", "Lat Pulldown", "Push Up",
-    "Lunges", "Leg Press", "Leg Extension", "Leg Curl",
-    "Face Pull", "Lateral Raise", "Bicep Curl", "Tricep Extension",
-    "Plank", "Crunch", "Russian Twist"
-  ];
+
 
   const {
     aiProgram,
@@ -344,10 +346,253 @@ export default function WorkoutView() {
 
 // 1. Custom Program Builder
 function CustomProgramBuilder({ onCancel, onSave }: { onCancel: () => void, onSave: (p: IAiWorkout) => void }) {
-  // Bu kısım aynı kalabilir, sadece input boyutları text-base yapılmalı (aşağıda örneği var)
-  // Yer kazanmak için kodu kısa tutuyorum, mantık ExerciseItem ile aynı.
+  const { user, login } = useAuth();
+  const { saveProgramToBackend } = useWorkoutStore(); // Store'dan save fonksiyonunu al
+  const [programName, setProgramName] = useState("");
+  const [days, setDays] = useState<IScheduleItem[]>([]);
+  const [activeDayIndex, setActiveDayIndex] = useState<number | null>(null);
+  const [isExerciseModalOpen, setIsExerciseModalOpen] = useState(false);
+
+  // Helper to add a new day
+  const handleAddDay = () => {
+    const dayNames = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
+    const nextDayName = dayNames[days.length % 7];
+    const newDay: IScheduleItem = {
+      day: nextDayName, // Default name based on count
+      exercises: []
+    };
+    setDays([...days, newDay]);
+    setActiveDayIndex(days.length); // Select the new day
+  };
+
+  const handleUpdateDayName = (index: number, newName: string) => {
+    const newDays = [...days];
+    newDays[index] = { ...newDays[index], day: newName };
+    setDays(newDays);
+  }
+
+
+  const handleRemoveDay = (index: number) => {
+    const newDays = [...days];
+    newDays.splice(index, 1);
+    setDays(newDays);
+    if (activeDayIndex === index) setActiveDayIndex(null);
+    if (activeDayIndex !== null && activeDayIndex > index) setActiveDayIndex(activeDayIndex - 1);
+  };
+
+  const handleAddExerciseToDay = (exerciseName: string) => {
+    if (activeDayIndex === null) return;
+    const newDays = [...days];
+    newDays[activeDayIndex].exercises.push({
+      name: exerciseName,
+      sets: "3",
+      reps: "12",
+      weight: "0",
+    });
+    setDays(newDays);
+    toast.success(`${exerciseName} eklendi`);
+    setIsExerciseModalOpen(false);
+  };
+
+  const handleRemoveExerciseFromDay = (dayIndex: number, exIndex: number) => {
+    const newDays = [...days];
+    newDays[dayIndex].exercises.splice(exIndex, 1);
+    setDays(newDays);
+  };
+
+  const handleUpdateExercise = (dayIndex: number, exIndex: number, field: keyof IExercisesItem, value: string) => {
+    const newDays = [...days];
+    newDays[dayIndex].exercises[exIndex] = {
+      ...newDays[dayIndex].exercises[exIndex],
+      [field]: value
+    };
+    setDays(newDays);
+  };
+
+  const handleSaveProgram = async () => {
+    if (!programName.trim()) {
+      toast.error("Lütfen program ismini giriniz.");
+      return;
+    }
+    if (days.length === 0) {
+      toast.error("Lütfen en az bir gün ekleyiniz.");
+      return;
+    }
+    if (days.some(d => d.exercises.length === 0)) {
+      toast.error("Lütfen tüm günlere en az bir egzersiz ekleyiniz veya boş günleri siliniz.");
+      return;
+    }
+
+    const newProgram: IAiWorkout = {
+      program_name: programName,
+      motivation: "Kendi oluşturduğun program ile hedeflerine ulaş!",
+      schedule: days,
+      nutrition_targets: { // Default values
+        calories: 2500,
+        protein: 150,
+        carbs: 300,
+        fats: 80
+      },
+      daily_commands: ["Bol su iç", "Uykunu al"]
+    };
+
+    if (user?.email) {
+      await saveProgramToBackend(user.email, newProgram);
+      onSave(newProgram);
+    } else {
+      // Local only fallback safely
+      onSave(newProgram);
+      toast.success("Program oluşturuldu (Kayıtlı kullanıcı değil)");
+    }
+  };
+
   return (
-    <div className="text-center text-zinc-500 py-10">Program oluşturucu burada...</div>
+    <div className="h-full flex flex-col bg-zinc-950 min-h-screen pb-20">
+      {/* Header */}
+      <div className="flex justify-between items-center p-4 border-b border-zinc-800 sticky top-0 bg-zinc-950 z-20">
+        <h3 className="text-lg font-bold text-white">Program Oluştur</h3>
+        <button onClick={onCancel} className="p-2 bg-zinc-800 rounded-full hover:bg-zinc-700 transition-colors">
+          <X size={20} className="text-zinc-400" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+
+        {/* Program Name Input */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-zinc-400">Program İsmi</label>
+          <input
+            type="text"
+            value={programName}
+            onChange={(e) => setProgramName(e.target.value)}
+            placeholder="Örn: 3 Günlük Tüm Vücut"
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+          />
+        </div>
+
+        {/* Days Section */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <label className="text-sm font-medium text-zinc-400">Antrenman Günleri</label>
+            <button onClick={handleAddDay} className="text-emerald-500 text-sm font-bold flex items-center gap-1 hover:text-emerald-400">
+              <Plus size={16} /> Gün Ekle
+            </button>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {days.map((day, idx) => (
+              <button
+                key={idx}
+                onClick={() => setActiveDayIndex(idx)}
+                className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold border transition-all ${activeDayIndex === idx
+                  ? 'bg-emerald-500 text-black border-emerald-500'
+                  : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:border-zinc-500'
+                  }`}
+              >
+                {day.day}
+              </button>
+            ))}
+          </div>
+
+          {/* Active Day Content */}
+          {activeDayIndex !== null && days[activeDayIndex] && (
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 animate-in fade-in slide-in-from-bottom-2">
+              <div className="flex justify-between items-center mb-4">
+                <input
+                  type="text"
+                  value={days[activeDayIndex].day}
+                  onChange={(e) => handleUpdateDayName(activeDayIndex, e.target.value)}
+                  className="bg-transparent text-white font-bold text-lg focus:outline-none border-b border-transparent focus:border-zinc-700 w-full mr-2"
+                />
+                <button onClick={() => handleRemoveDay(activeDayIndex)} className="text-red-400 p-2 hover:bg-zinc-800 rounded-lg">
+                  <Trash2 size={18} />
+                </button>
+              </div>
+
+              {days[activeDayIndex].exercises.length === 0 ? (
+                <div className="text-center py-6 border-dashed border border-zinc-700 rounded-xl">
+                  <p className="text-zinc-500 text-sm mb-2">Bu güne henüz egzersiz eklenmedi.</p>
+                  <button
+                    onClick={() => setIsExerciseModalOpen(true)}
+                    className="text-emerald-500 font-bold text-sm bg-emerald-500/10 px-4 py-2 rounded-lg hover:bg-emerald-500/20"
+                  >
+                    + Egzersiz Ekle
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {days[activeDayIndex].exercises.map((ex, exIdx) => (
+                    <div key={exIdx} className="bg-zinc-950 p-3 rounded-xl border border-zinc-800 flex flex-col gap-2">
+                      <div className="flex justify-between items-start">
+                        <span className="font-medium text-zinc-200">{ex.name}</span>
+                        <button onClick={() => handleRemoveExerciseFromDay(activeDayIndex, exIdx)} className="text-zinc-600 hover:text-red-400">
+                          <X size={16} />
+                        </button>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <label className="text-[10px] text-zinc-500 uppercase">Set</label>
+                          <input
+                            type="text" inputMode="numeric"
+                            value={ex.sets}
+                            onChange={(e) => handleUpdateExercise(activeDayIndex, exIdx, 'sets', e.target.value)}
+                            className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-white text-center"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-[10px] text-zinc-500 uppercase">Tekrar</label>
+                          <input
+                            type="text"
+                            value={ex.reps}
+                            onChange={(e) => handleUpdateExercise(activeDayIndex, exIdx, 'reps', e.target.value)}
+                            className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-white text-center"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setIsExerciseModalOpen(true)}
+                    className="w-full py-2 border border-zinc-700 border-dashed rounded-xl text-zinc-400 text-sm font-medium hover:bg-zinc-800 transition-colors"
+                  >
+                    + Egzersiz Ekle
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="p-4 border-t border-zinc-800 bg-zinc-950 mt-auto sticky bottom-0 z-20">
+        <button onClick={handleSaveProgram} className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3.5 rounded-xl transition-colors shadow-lg shadow-emerald-500/20 active:scale-[0.98]">
+          Programı Kaydet
+        </button>
+      </div>
+
+      {/* Exercise Selection Modal */}
+      {isExerciseModalOpen && (
+        <div className="fixed inset-0 bg-black/80 z-[60] flex items-end sm:items-center justify-center animate-in fade-in duration-200">
+          <div className="bg-zinc-900 w-full max-w-md h-[80vh] sm:h-[600px] flex flex-col rounded-t-3xl sm:rounded-2xl overflow-hidden animate-in slide-in-from-bottom-10">
+            <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900">
+              <h3 className="text-white font-bold">Egzersiz Seç</h3>
+              <button onClick={() => setIsExerciseModalOpen(false)} className="bg-zinc-800 p-1.5 rounded-full"><X size={18} className="text-zinc-400" /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2">
+              {initialExercises.map((ex, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleAddExerciseToDay(ex)}
+                  className="w-full text-left p-3 hover:bg-zinc-800 rounded-lg text-zinc-300 font-medium border-b border-zinc-800/50 last:border-0"
+                >
+                  {ex}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
