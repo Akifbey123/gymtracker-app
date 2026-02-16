@@ -1,4 +1,4 @@
-import { Dumbbell, Clock, Flame, Zap, Activity, Trophy, Plus, Trash2, Check, ChevronDown, History, X } from 'lucide-react';
+import { Dumbbell, Clock, Flame, Zap, Activity, Trophy, Plus, Trash2, Check, ChevronDown, History, X, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { Header } from '../components/shared';
 import { useAuth } from '../context/UserContext';
@@ -112,15 +112,20 @@ export default function WorkoutView() {
       {/* ANA KAPLAYICI */}
       <div style={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden', boxSizing: 'border-box' }} className="max-w-6xl mx-auto pb-32 lg:pb-6">
 
-        {/* CREATE PROGRAM SECTION */}
-        {!aiProgram && !isCreatingProgram && (
-          <div className="px-4 py-4">
-            <button
-              onClick={() => setIsCreatingProgram(true)}
-              className="w-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 py-4 rounded-xl flex items-center justify-center gap-2 font-medium active:scale-[0.98] transition-transform"
-            >
-              <Plus size={20} /> Kendi Programını Oluştur
-            </button>
+        {/* ACTION BUTTONS */}
+        {!isCreatingProgram && (
+          <div className="px-4 py-4 grid grid-cols-2 gap-3">
+            {!aiProgram && (
+              <button
+                onClick={() => setIsCreatingProgram(true)}
+                className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 py-4 rounded-xl flex flex-col items-center justify-center gap-2 font-medium active:scale-[0.98] transition-transform"
+              >
+                <Plus size={20} className="text-emerald-500" />
+                <span className="text-xs">Program Oluştur</span>
+              </button>
+            )}
+
+
           </div>
         )}
 
@@ -240,7 +245,29 @@ export default function WorkoutView() {
                           <div className="space-y-2">
                             {day.exercises.map((ex, i) => {
                               const lastLog = getLastLog(ex.name);
-
+                              if (ex.name.toLowerCase() == "squat") {
+                                return (
+                                  <div>
+                                    <ExerciseItem
+                                      key={i}
+                                      exercise={ex}
+                                      day={day.day}
+                                      lastLog={lastLog}
+                                      onSave={handleSaveLog}
+                                      action={
+                                        <button
+                                          onClick={() => window.location.href = '/ai-coach'}
+                                          className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-zinc-950 border border-emerald-500/20 hover:border-emerald-500 transition-all rounded-lg px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 group"
+                                        >
+                                          <Camera size={14} className="group-hover:scale-110 transition-transform" />
+                                          <span className="hidden sm:inline">Form Analiz</span>
+                                          <span className="sm:hidden">Form Analiz</span>
+                                        </button>
+                                      }
+                                    />
+                                  </div>
+                                );
+                              }
 
 
 
@@ -294,50 +321,53 @@ export default function WorkoutView() {
               )}
             </section>
           </div >
-        )}
+        )
+        }
 
         {/* History Section */}
-        {workoutLogs.length > 0 && (
-          <section className="mx-4 mt-6 mb-10">
-            <h3 className="text-lg font-semibold text-zinc-200 mb-4 flex items-center gap-2">
-              <Activity size={20} className="text-emerald-500" /> Son Aktiviteler
-            </h3>
-            <div className="space-y-3">
-              {[...workoutLogs].reverse().slice(0, 5).map((log: any, i: number) => (
-                <div key={i} className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 transition-all hover:bg-zinc-900/80">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h4 className="font-semibold text-zinc-100 text-base">{log.exercise}</h4>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <Clock size={12} className="text-zinc-500" />
-                        <span className="text-xs text-zinc-500">{new Date(log.date).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    {/* Optional: Add a small icon or badge here if needed */}
-                  </div>
-
-                  <div className="space-y-1.5">
-                    {log.sets && log.sets.length > 0 ? (
-                      log.sets.map((set: any, idx: number) => (
-                        <div key={idx} className="flex justify-between items-center text-sm py-1.5 border-b border-zinc-800/50 last:border-0 last:pb-0">
-                          <span className="text-zinc-500 font-medium text-xs bg-zinc-800/50 px-2 py-0.5 rounded">Set {idx + 1}</span>
-                          <span className="font-mono text-zinc-300">
-                            <span className="text-emerald-400 font-bold">{set.reps}</span> reps
-                            <span className="text-zinc-600 mx-2">•</span>
-                            <span className="text-white font-bold">{set.weight}</span> kg
-                          </span>
+        {
+          workoutLogs.length > 0 && (
+            <section className="mx-4 mt-6 mb-10">
+              <h3 className="text-lg font-semibold text-zinc-200 mb-4 flex items-center gap-2">
+                <Activity size={20} className="text-emerald-500" /> Son Aktiviteler
+              </h3>
+              <div className="space-y-3">
+                {[...workoutLogs].reverse().slice(0, 5).map((log: any, i: number) => (
+                  <div key={i} className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 transition-all hover:bg-zinc-900/80">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h4 className="font-semibold text-zinc-100 text-base">{log.exercise}</h4>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <Clock size={12} className="text-zinc-500" />
+                          <span className="text-xs text-zinc-500">{new Date(log.date).toLocaleDateString()}</span>
                         </div>
-                      ))
-                    ) : (
-                      <span className="text-zinc-500 italic text-sm">Detay yok</span>
-                    )}
+                      </div>
+                      {/* Optional: Add a small icon or badge here if needed */}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {log.sets && log.sets.length > 0 ? (
+                        log.sets.map((set: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center text-sm py-1.5 border-b border-zinc-800/50 last:border-0 last:pb-0">
+                            <span className="text-zinc-500 font-medium text-xs bg-zinc-800/50 px-2 py-0.5 rounded">Set {idx + 1}</span>
+                            <span className="font-mono text-zinc-300">
+                              <span className="text-emerald-400 font-bold">{set.reps}</span> reps
+                              <span className="text-zinc-600 mx-2">•</span>
+                              <span className="text-white font-bold">{set.weight}</span> kg
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <span className="text-zinc-500 italic text-sm">Detay yok</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-      </div>
+                ))}
+              </div>
+            </section>
+          )
+        }
+      </div >
     </>
   )
 }
@@ -597,7 +627,7 @@ function CustomProgramBuilder({ onCancel, onSave }: { onCancel: () => void, onSa
 }
 
 // 2. OPTIMIZE EDILMIS EXERCISE ITEM
-function ExerciseItem({ exercise, day, lastLog, onSave }: { exercise: IExercisesItem, day: string, lastLog: any, onSave: (d: string, e: string, sets: { reps: number, weight: number }[]) => void }) {
+function ExerciseItem({ exercise, day, lastLog, onSave, action }: { exercise: IExercisesItem, day: string, lastLog: any, onSave: (d: string, e: string, sets: { reps: number, weight: number }[]) => void, action?: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const initialSetCount = parseInt(exercise.sets?.split('-')[0] || "3", 10) || 3;
@@ -680,6 +710,13 @@ function ExerciseItem({ exercise, day, lastLog, onSave }: { exercise: IExercises
             )}
           </div>
         </div>
+
+        {/* Action Button Area */}
+        {action && (
+          <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0 mx-2">
+            {action}
+          </div>
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           <div className="font-mono text-zinc-300 bg-zinc-950 rounded-lg border border-zinc-800" style={{ fontSize: '12px', padding: '4px 8px', whiteSpace: 'nowrap' }}>

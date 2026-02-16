@@ -15,6 +15,7 @@ import NutritionView from "./pages/Nutrition"
 import GoalsView from './pages/Goals'
 import SettingsView from './pages/Settings'
 import CameraCapture from './pages/CameraCapture'
+import AIWorkoutCoach from './components/AIWorkoutCoach'
 // ... import other pages
 
 export default function App() {
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="goals" element={<GoalsView />} />
             <Route path="settings" element={<SettingsView />} />
             <Route path="camera" element={<CameraCapture />} />
+            <Route path="ai-coach" element={<AIWorkoutCoach />} />
             {/* Add other protected routes here */}
           </Route>
 
