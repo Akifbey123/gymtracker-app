@@ -141,7 +141,7 @@ export default function Login() {
         {/* Sign Up Link */}
         <p className="text-center text-sm text-zinc-500 mt-8">
           Hesabın yok mu?{' '}
-          <Link to="Register" className="text-emerald-400 font-medium hover:text-emerald-300 transition-colors hover:underline">
+          <Link to="/register" className="text-emerald-400 font-medium hover:text-emerald-300 transition-colors hover:underline">
             Hemen kayıt ol
           </Link>
         </p>
