@@ -88,7 +88,7 @@ export default function FitnessDashboard() {
         <div className="flex items-center justify-between max-w-md mx-auto">
           <MobileNavItem icon={<Home size={22} />} label="Ana Sayfa" active={activeTab === "home"} onClick={() => handleNavigation("/home")} />
           <MobileNavItem icon={<Dumbbell size={22} />} label="Antrenman" active={activeTab === "workout"} onClick={() => handleNavigation("/workout")} />
-
+          <MobileNavItem icon={<Camera size={22} />} label="AI chat" active={activeTab === "goals"} onClick={() => handleNavigation("/goals")} />
           <button onClick={goToCamera}
             className="relative -top-4 w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-zinc-950 shadow-lg shadow-emerald-500/25">
             <Camera size={24} />
