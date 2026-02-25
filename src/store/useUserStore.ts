@@ -54,6 +54,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     logout: () => {
         localStorage.removeItem('currentUser');
         set({ user: null, isAuthenticated: false });
+        toast.success("Çıkış yapıldı");
     },
 
     syncWithLocalStorage: () => {

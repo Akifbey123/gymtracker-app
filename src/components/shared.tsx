@@ -1,10 +1,21 @@
 import React from 'react';
 import { Bell } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // --- Header Bileşeni ---
 export function Header({ title, subtitle, showProfileOnMobile = false }: { title: string, subtitle: string, showProfileOnMobile?: boolean }) {
-  const { user } = useUserStore();
+  const { user, logout } = useUserStore();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    setIsDropdownOpen(false);
+    logout();
+    navigate('/login');
+  };
+
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between px-4 lg:px-8 py-4 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/50">
       <div>
@@ -15,12 +26,27 @@ export function Header({ title, subtitle, showProfileOnMobile = false }: { title
       <div className="flex items-center gap-3">
 
         {showProfileOnMobile && (
-          <div className="w-9 h-9 rounded-full bg-zinc-800 overflow-hidden lg:hidden">
+          <div className="w-9 h-9 rounded-full bg-zinc-800 overflow-hidden lg:hidden"
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+
+          >
             <img
               src={user?.profilePhoto || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100"}
               alt="Profile"
               className="w-full h-full object-cover"
             />
+            {isDropdownOpen && (
+              <div className="absolute top-full right-0 mt-2 w-48 bg-zinc-800 rounded-lg shadow-lg py-2">
+                <button
+                  onClick={() => handleLogout()
+
+                  }
+                  className="block w-full text-left px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-700"
+                >
+                  Çıkış Yap
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

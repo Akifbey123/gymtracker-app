@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, ChevronDown, User, Dumbbell } from 'lucide-react';
+import { Trophy, ChevronDown, User, Dumbbell, Info } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-
+import NoteModal from './modal1'
 interface LeaderboardUser {
     rank: number;
     username: string;
@@ -70,6 +70,7 @@ export default function Leaderboard() {
     const [isOpen, setIsOpen] = useState(false);
     const [leaders, setLeaders] = useState<LeaderboardUser[]>([]);
     const [loading, setLoading] = useState(false);
+    const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchLeaderboard = async () => {
@@ -123,6 +124,12 @@ export default function Leaderboard() {
 
     return (
         <section className="bg-zinc-900/60 border border-zinc-800/50 rounded-2xl p-6 lg:p-8 flex flex-col h-full">
+            <button
+                onClick={() => setIsNoteModalOpen(true)}>
+                <Info size={20} className="text-zinc-200 hover:text-zinc-100 mb-3 " />
+
+            </button>
+
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
                     <div className="p-2 bg-yellow-500/10 rounded-lg">
@@ -141,6 +148,8 @@ export default function Leaderboard() {
                         onClick={() => setIsOpen(!isOpen)}
                         className="flex items-center gap-2 bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700/50 rounded-xl px-3 py-1.5 text-sm font-medium text-zinc-200 transition-colors"
                     >
+
+                        <Dumbbell size={14} className="text-zinc-200" />
                         {selectedExercise}
                         <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                     </button>
@@ -220,6 +229,10 @@ export default function Leaderboard() {
                 )}
             </div>
 
+            <NoteModal
+                isOpen={isNoteModalOpen}
+                onClose={() => setIsNoteModalOpen(false)}
+            />
         </section>
     );
 }

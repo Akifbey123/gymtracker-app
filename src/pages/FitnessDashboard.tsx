@@ -7,7 +7,8 @@ import {
   Dumbbell,
   Settings,
   Camera,
-  Trophy
+  Trophy,
+  Mic
 } from "lucide-react"
 import { useUserStore } from "../store/useUserStore";
 
@@ -62,7 +63,7 @@ export default function FitnessDashboard() {
             <NavIcon icon={<Home size={22} />} active={activeTab === "home"} onClick={() => handleNavigation("/home")} />
             <NavIcon icon={<Dumbbell size={22} />} active={activeTab === "workout"} onClick={() => handleNavigation("/workout")} />
             <NavIcon icon={<Utensils size={22} />} active={activeTab === "nutrition"} onClick={() => handleNavigation("/nutrition")} />
-            <NavIcon icon={<Trophy size={22} />} active={activeTab === "goals"} onClick={() => handleNavigation("/goals")} />
+            <NavIcon icon={<Mic size={22} />} active={activeTab === "goals"} onClick={() => handleNavigation("/goals")} />
             <NavIcon icon={<Settings size={22} />} active={activeTab === "settings"} onClick={() => handleNavigation("/settings")} />
           </nav>
 
